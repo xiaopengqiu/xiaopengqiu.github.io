@@ -4,23 +4,23 @@
   
   
   <entry>
-    <title>Hello World</title>
-    <link href="/2021/06/10/hello-world/"/>
-    <url>/2021/06/10/hello-world/</url>
+    <title>什么是Docker</title>
+    <link href="/2024/04/15/2025-04/what-is-Docker/"/>
+    <url>/2024/04/15/2025-04/what-is-Docker/</url>
     
-    <content type="html"><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p><h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ hexo new <span class="hljs-string">&quot;My New Post&quot;</span><br></code></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p><h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ hexo server<br></code></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p><h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ hexo generate<br></code></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p><h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ hexo deploy<br></code></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>]]></content>
+    <content type="html"><![CDATA[<h1 id="什么是Docker"><a href="#什么是Docker" class="headerlink" title="什么是Docker"></a>什么是Docker</h1><p>Docker是一个开源的轻量级容器平台，可以将应用及其依赖打包在Docker中，实现快速部署和跨环境运行。</p><h1 id="Docker的核心组件"><a href="#Docker的核心组件" class="headerlink" title="Docker的核心组件"></a>Docker的核心组件</h1><p>Docker基于B&#x2F;S架构，其核心组件包括</p><ol><li>Docker Client</li><li>Docker Daemon</li><li>Docker Image</li><li>Docker Register</li><li>Docker Container</li></ol><h2 id="Docker-Client"><a href="#Docker-Client" class="headerlink" title="Docker Client"></a>Docker Client</h2><p>用于发起各种请求，如<code>docker run</code>、<code>docker build</code>等等。最常用的 Docker 客户端就是 docker 命令和<a href="https://www.docker.com/products/docker-desktop/">docker desktop</a>。</p><h2 id="Dokcer-Deamon"><a href="#Dokcer-Deamon" class="headerlink" title="Dokcer Deamon"></a>Dokcer Deamon</h2><p>又称之为docker的核心进程，该进程会提供一个<strong>API Server</strong>（API Server是Deamon的一部分），负责接收来自docker client的请求，API Server 将通过Docker daemon 内部的一个<strong>路由</strong>分发调度，将请求路由到Daemon中对应的处理函数<strong>handler</strong>，handler再调用底层逻辑完成请求响应，并通过API Server返回响应。</p><p>Handler调用底层逻辑时，会交由处理引擎engine创建指定的job，job中绑定了具体的功能函数，完成处理逻辑。</p><p>docker deamon的结构可以分为三个部分：</p><ul><li>Docker Server，包括API Server、Router、Handler</li><li>Engine</li><li>Job</li></ul><p>Docker Daemon 可以认为是通过 Docker Server 模块接受 Docker Client 的请求，并在 Engine 中处理请求，然后根据请求类型，创建出指定的 Job 并运行。 Docker Daemon 运行在 Docker host 上，负责创建、运行、监控容器，构建、存储镜像。</p><p>Docker Deamon的架构图如下所示：</p><p><img src="/source/images/docker%E6%9E%B6%E6%9E%84%E5%9B%BE.jpeg" alt="Docker架构图"></p>]]></content>
     
     
     <categories>
       
-      <category>Java</category>
+      <category>Docker</category>
       
     </categories>
     
     
     <tags>
       
-      <tag>default</tag>
+      <tag>Docker</tag>
       
     </tags>
     
