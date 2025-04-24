@@ -28,7 +28,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://xiaopengqiu.github.io/2025/04/what-is-docker/docker%E6%9E%B6%E6%9E%84%E5%9B%BE.jpeg">
 <meta property="article:published_time" content="2024-04-15T15:06:20.000Z">
-<meta property="article:modified_time" content="2025-04-19T15:35:57.680Z">
+<meta property="article:modified_time" content="2025-04-24T16:05:47.103Z">
 <meta property="article:author" content="John Doe">
 <meta property="article:tag" content="Docker">
 <meta name="twitter:card" content="summary_large_image">
@@ -238,7 +238,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          1.4k 字
+          2.1k 字
         
       </span>
     
@@ -249,7 +249,7 @@
         
         
         
-          12 分钟
+          18 分钟
         
       </span>
     
@@ -405,6 +405,43 @@
 <p>其中参数-t用于给镜像命名。<br>3. 使用run命令启动容器</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">docker run &lt;镜像名&gt; --name &lt;容器名&gt; -d<br></code></pre></td></tr></table></figure>
 <p>其中-name用于指定容器名，-d表示后台运行。</p>
+<h1 id="容器是怎么隔离的"><a href="#容器是怎么隔离的" class="headerlink" title="容器是怎么隔离的"></a>容器是怎么隔离的</h1><p>容器技术的核心功能，就是通过约束和修改进程的动态表现，从而为其创建一个“边界”。</p>
+<p>容器技术里进行隔离的两个核心技术：<strong>Cgroup</strong>技术和<strong>Namespace</strong>技术。</p>
+<h2 id="Cgroup技术"><a href="#Cgroup技术" class="headerlink" title="Cgroup技术"></a>Cgroup技术</h2><p>其名源自<strong>控制组群（Control Group）<strong>的简写，是Linux内核的一个功能，通过</strong>追踪和限制</strong>进程组的资源使用情况，来限制、控制与分离一个<strong>进程组</strong>的资源（如CPU、内存、磁盘等）。</p>
+<h2 id="Namespace技术"><a href="#Namespace技术" class="headerlink" title="Namespace技术"></a>Namespace技术</h2><p>Namespace是Linux内核的一种机制，通过在内核中为不同进程分配不同的<strong>资源视图</strong>来实现资源隔离。</p>
+<p>通俗的来讲，Cgroup负责<strong>资源限制</strong>，限制容器能使用多少资源；Namespace负责<strong>资源隔离</strong>，让容器看不见“外面的世界”。</p>
+<h1 id="Docker的镜像层"><a href="#Docker的镜像层" class="headerlink" title="Docker的镜像层"></a>Docker的镜像层</h1><p>Docker镜像实际上不是一个完整的压缩包，而是由一层层镜像层叠加而成的结构，每一层都是一个文件系统的变更记录，最终形成完整的可用镜像。</p>
+<p>镜像层由Dockerfile中的<strong>每一条指令</strong>生成，比如：</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs dockerfile"><span class="hljs-keyword">FROM</span> ubuntu:<span class="hljs-number">20.04</span>        <span class="hljs-comment"># 创建基础层（Layer 1）</span><br><span class="hljs-keyword">RUN</span><span class="language-bash"> apt-get update       <span class="hljs-comment"># 创建新的只读层（Layer 2）</span></span><br><span class="hljs-keyword">RUN</span><span class="language-bash"> apt-get install -y python3 <span class="hljs-comment"># Layer 3</span></span><br><span class="hljs-keyword">COPY</span><span class="language-bash"> . /app              <span class="hljs-comment"># Layer 4</span></span><br></code></pre></td></tr></table></figure>
+
+<p>镜像层的特点：</p>
+<ul>
+<li>每执行一条指令，就会生成一层</li>
+<li>每一层都依赖于上一层</li>
+<li>每一层都是不可变的，都是<strong>只读层</strong></li>
+<li>如果中间的镜像层发生变化，Docker就会重建该层及以上的层。</li>
+</ul>
+<p>每一个镜像层本质上是一个文件快照系统（通常是一个.tar压缩包），它记录了该层：</p>
+<ul>
+<li>添加的文件</li>
+<li>修改的文件</li>
+<li>删除的文件</li>
+</ul>
+<p>使用镜像层的好处：</p>
+<ol>
+<li>分层缓存<br>Docker构建镜像时，如果某层的指令没变，它就会复用该层，避免重新构建。</li>
+<li>高效存储<br>多个镜像可以共用相同的底层层（比如多个 Python 项目共用 ubuntu 基础层），节省磁盘空间。</li>
+<li>快速分发<br>每一层都可以单独下载和上传，Docker Hub只需要同步变化的部分。</li>
+</ol>
+<h1 id="Docker的容器层"><a href="#Docker的容器层" class="headerlink" title="Docker的容器层"></a>Docker的容器层</h1><p>基于镜像构建容器时，就是在最外层增加一个<strong>可写层</strong>供动态编辑。<br>容器层主要负责：</p>
+<ul>
+<li>容器运行时的文件写入（如生成日志、缓存文件、应用运行时的临时数据）；</li>
+<li>用户在容器内修改文件（如 echo hello &gt; file.txt）；<br>容器停止或删除，可写层会消失。若使用 <code>docker commit</code>将容器保存成新的镜像，就会把可写层也转化成镜像层。</li>
+</ul>
+<p>注意事项：</p>
+<ul>
+<li>Cgroup和Namespace都属于内核空间，与层无关，由进程加载对应的配置；镜像层、容器层都属于文件系统。</li>
+</ul>
 
                 
               </div>
