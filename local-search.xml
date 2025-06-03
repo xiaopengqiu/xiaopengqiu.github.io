@@ -53,5 +53,32 @@
   
   
   
+  <entry>
+    <title>云原生资源类型</title>
+    <link href="/2025/06/what-is-workload/"/>
+    <url>/2025/06/what-is-workload/</url>
+    
+    <content type="html"><![CDATA[<p>云原生资源类型：</p><ul><li>工作负载（Workload）资源</li><li>服务发现与负载均衡资源（Service &amp; Networking）</li><li>配置与存储资源（Configuration &amp; Storage）</li><li>身份与访问控制（Security &amp; RBAC）</li><li>调度与运行时资源（Scheduling &amp; Runtime）</li><li>集群元数据与控制资源（Meta &amp; Control）</li></ul><h2 id="workload"><a href="#workload" class="headerlink" title="workload"></a>workload</h2><p>workload是指运行在k8s集群上的应用程序实例，workload通常管理着一组Pod。</p><p>常见的 Workload 类型（以 Kubernetes 为例）：</p><ol><li><p>Pod<br>最基本的计算单元，通常包含一个或多个容器。</p></li><li><p>Deployment<br>用于管理无状态服务，支持自动扩缩容、滚动更新等。</p></li><li><p>StatefulSet<br>用于管理有状态服务，比如数据库，提供稳定的网络标识、存储等。</p></li><li><p>DaemonSet<br>保证每个（或指定）节点上运行一个 Pod，常用于日志收集、监控等。</p></li><li><p>Job<br>一次性任务，执行完成后退出，适用于批处理任务。</p></li><li><p>CronJob<br>类似于 Linux 的定时任务，定时运行 Job。</p></li></ol><p>Workload 的作用</p><ul><li><p>部署应用：你可以通过定义 Deployment 或 StatefulSet 来部署服务。</p></li><li><p>生命周期管理：自动控制副本数量、重启策略、滚动升级等。</p></li><li><p>解耦基础设施与应用：Workload 资源定义了“运行什么、怎么运行”，与底层节点、操作系统解耦。</p></li><li><p>可观测性和伸缩性：配合服务网格、监控工具和自动扩缩容机制，提高系统弹性。</p></li></ul>]]></content>
+    
+    
+    <categories>
+      
+      <category>技术介绍</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>Docker</tag>
+      
+      <tag>k8s</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
   
 </search>
