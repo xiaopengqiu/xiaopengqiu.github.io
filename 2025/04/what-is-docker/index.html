@@ -28,7 +28,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://xiaopengqiu.github.io/2025/04/what-is-docker/docker%E6%9E%B6%E6%9E%84%E5%9B%BE.jpeg">
 <meta property="article:published_time" content="2025-04-15T15:06:20.000Z">
-<meta property="article:modified_time" content="2025-06-03T15:45:27.426Z">
+<meta property="article:modified_time" content="2025-06-08T15:10:48.602Z">
 <meta property="article:author" content="xiaopengqiu">
 <meta property="article:tag" content="Docker">
 <meta name="twitter:card" content="summary_large_image">
@@ -238,7 +238,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          2.1k 字
+          2.4k 字
         
       </span>
     
@@ -249,7 +249,7 @@
         
         
         
-          18 分钟
+          21 分钟
         
       </span>
     
@@ -441,6 +441,32 @@
 <p>注意事项：</p>
 <ul>
 <li>Cgroup和Namespace都属于内核空间，与层无关，由进程加载对应的配置；镜像层、容器层都属于文件系统。</li>
+</ul>
+<h1 id="Docker的四种网络模式"><a href="#Docker的四种网络模式" class="headerlink" title="Docker的四种网络模式"></a>Docker的四种网络模式</h1><ul>
+<li>host模式</li>
+<li>container模式</li>
+<li>none模式</li>
+<li>bridge模式</li>
+</ul>
+<h2 id="host模式"><a href="#host模式" class="headerlink" title="host模式"></a>host模式</h2><p>容器不会有独立的network namespace，而是和宿主机共用network namespace，使用宿主机的IP和端口，但是其他资源如文件系统、进程列表还是和宿主机隔离的。</p>
+<ul>
+<li>优点：网络性能号</li>
+<li>缺点：没有网络隔离，可能存在端口冲突</li>
+</ul>
+<h2 id="container模式"><a href="#container模式" class="headerlink" title="container模式"></a>container模式</h2><p>指定新创建的容器和一个已有的容器共用一个network namespace。</p>
+<ul>
+<li>优点：可以实现进程隔离+网络共享</li>
+<li>缺点：一个容器的网络故障会影响多个容器</li>
+</ul>
+<h2 id="none模式"><a href="#none模式" class="headerlink" title="none模式"></a>none模式</h2><p>没有network container，完全禁用网络功能</p>
+<ul>
+<li>优点：网络安全，不会被攻击</li>
+<li>缺点：无法访问外部，也无法被外部访问</li>
+</ul>
+<h2 id="bridge模式（默认）"><a href="#bridge模式（默认）" class="headerlink" title="bridge模式（默认）"></a>bridge模式（默认）</h2><p>bridge模式是<strong>默认</strong>的网络模式。容器有自己的network namespace，有自己NAT IP地址，通过虚拟网桥docker0与宿主机网络进行连接，由虚拟网桥转发网络请求（类似于NAT私有网络地址转换）。</p>
+<ul>
+<li>优点：网络隔离性好，各自拥有独立的端口</li>
+<li>缺点：性能不如host模式（中间经过了一层转发）</li>
 </ul>
 
                 
