@@ -27,7 +27,7 @@
 <meta property="og:description" content="k8s负责多个pod的部署与运维，由一系列Pod以及管理Pod的一系列工具组成。">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2025-06-11T14:49:11.000Z">
-<meta property="article:modified_time" content="2025-06-16T15:33:39.808Z">
+<meta property="article:modified_time" content="2025-06-26T15:31:37.857Z">
 <meta property="article:author" content="xiaopengqiu">
 <meta property="article:tag" content="k8s">
 <meta name="twitter:card" content="summary_large_image">
@@ -236,7 +236,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          1.2k 字
+          1.4k 字
         
       </span>
     
@@ -247,7 +247,7 @@
         
         
         
-          10 分钟
+          12 分钟
         
       </span>
     
@@ -307,10 +307,10 @@
 <p><strong>在云原生应用中，一般不会直接去创建裸的Pod，而是通过Pod控制器去创建Pod，确保Pod生命周期地安全、稳定</strong>。</p>
 <p>Pod控制器主要包括五大类：</p>
 <ol>
-<li>Deploymoent。用于管理一组无状态的Pod，这一组Pod通常是一个Pod的多个副本。这些Pod是无状态的，可以无序启动和关闭，系统会尽量保证副本数量，但没有顺序要求。这些Pod的IP和DNS是动态的，重启后会发生变化，</li>
-<li>stateful。用于管理一组有状态的Pod，这些Pod通常是一个Pod的多个副本，但这些副本之间定义了启动顺序，列入：数据库、消息队列。这些Pod的IP和DNS是固定的，重启后不会发生变化。</li>
+<li>Deploymoent。用于管理一组无状态的Pod，这一组Pod通常是一个Pod的多个副本。这些Pod是无状态的，可以无序启动和关闭，系统会尽量保证副本数量，但没有顺序要求。这些Pod的IP和DNS是动态的，重启后会发生变化。</li>
+<li>Stateful。用于管理一组有状态的Pod，这些Pod通常是一个Pod的多个副本，但这些副本之间定义了启动顺序，列入：数据库、消息队列。这些Pod的IP和DNS是固定的，重启后不会发生变化。</li>
 <li>DemonSet。用于确保集群中每个服务器都会有一个Pod副本。</li>
-<li>Job。用于管理一次性Pod，执行完后销毁。其副本数量相当于指明任务运行的次数。多用于脚本的管理</li>
+<li>Job。用于管理一次性Pod，执行完后销毁。其副本数量相当于指明任务运行的次数。多用于脚本的管理。</li>
 <li>CronJob。用于控制定时运行的Job。</li>
 </ol>
 <h2 id="Namespace"><a href="#Namespace" class="headerlink" title="Namespace"></a>Namespace</h2><p>为了隔离不同类型的资源组，引入了命名空间（namespace）的概念。namespace可以理解为k8s内部的虚拟集群组，查询k8s内的资源需要指定namespace。</p>
@@ -340,11 +340,21 @@
 <p>Pod控制器stateful也是通过service为Pod提供稳定的IP，确保Pod每次重建都会保留固定的IP和DNS。</p>
 <p>Service共有5种类型：</p>
 <ul>
-<li>ClusterIP（默认类型），用于集群内部通信，会自动分配一个虚拟 IP，该IP不能从集群外访问，适用于服务之间的内部通信。</li>
+<li>ClusterIP（默认类型），用于集群内部通信，会自动分配一个固定的虚拟 IP，该IP不能从集群外访问，适用于服务之间的内部通信。</li>
 <li>NodePort，通过端暴露端口的方式可用于集群外访问的Service，给每个Node暴露一个端口，可通过<strong>NodeIP：NodePort</strong>进行访问。注意：Node是Cluster中的最小计算单元，一般是一个实际运行的机器，上面包含多个Pod。</li>
-<li>LoadBalancer，用于创建可负载均衡的对外访问的Service。</li>
+<li>LoadBalancer，在NodePort的基础上增加了一层负载均衡器，用于创建可负载均衡的对外访问的Service。</li>
 <li>ExternalName，用于在集群内部访问外部服务，将集群内部主机名映射到外部服务的DNS稳定访问。</li>
 <li>Headless Service，通常用于StatefulSet，不分配Cluster IP，直接暴露每个Pod的真实IP，然后通过DNS每次都指向该Pod，提供稳定的主机名访问，即IP不固定，但DNS主机名稳定。</li>
+</ul>
+<h2 id="Ingress"><a href="#Ingress" class="headerlink" title="Ingress"></a>Ingress</h2><p>Ingress负责管理集群HTTP&#x2F;HTTPS路由规则的资源。与Service相比，Service侧重于IP+Port进行请求转发（TCP&#x2F;UDP），Ingress通过域名URL+Path进行请求转发（HTTP&#x2F;HTTPS）。</p>
+<p>Ingress定义了路由规则，但不会自动生效，由Ingress Controller监听 Ingress 对象，由Ingress Controller根据Ingress定义的规则进行实际生效、执行路由转发。Ingress Controller会将请求转发给对应的Service，再由Service转发给对应的Pod进行执行。</p>
+<h2 id="k8s整体架构"><a href="#k8s整体架构" class="headerlink" title="k8s整体架构"></a>k8s整体架构</h2><p>k8s的整体架构图如下所示：</p>
+
+
+<p>下面根据外部请求打到k8s的整个路由过程，详细介绍一下k8s的整体架构及各个组件的作用：</p>
+<ul>
+<li>外部请求访问k8s服务时，请求优先打到Ingress Controller，根据Ingress定义的规则路由给对应的Service。</li>
+<li>Kube-proxy：Kube-proxy是运行在每个Node上的网络代理组件，由该组件实现Service到Pod的路由转发及负载均衡。</li>
 </ul>
 
                 
