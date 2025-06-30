@@ -22,15 +22,17 @@
     <meta name="description" content="k8s负责多个pod的部署与运维，由一系列Pod以及管理Pod的一系列工具组成。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="k8s相关概念介绍">
-<meta property="og:url" content="https://xiaopengqiu.github.io/2025/06/what-is-kube/index.html">
+<meta property="og:url" content="https://xiaopengqiu.github.io/2025/06/what-is-k8s/index.html">
 <meta property="og:site_name" content="风雪归程">
 <meta property="og:description" content="k8s负责多个pod的部署与运维，由一系列Pod以及管理Pod的一系列工具组成。">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://xiaopengqiu.github.io/2025/06/what-is-k8s/k8s%E7%BB%93%E6%9E%84%E5%9B%BE.jpeg">
 <meta property="article:published_time" content="2025-06-11T14:49:11.000Z">
-<meta property="article:modified_time" content="2025-06-30T14:41:57.804Z">
+<meta property="article:modified_time" content="2025-06-30T15:21:50.388Z">
 <meta property="article:author" content="xiaopengqiu">
 <meta property="article:tag" content="k8s">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://xiaopengqiu.github.io/2025/06/what-is-k8s/k8s%E7%BB%93%E6%9E%84%E5%9B%BE.jpeg">
   
   
   
@@ -236,7 +238,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          1.4k 字
+          1.7k 字
         
       </span>
     
@@ -247,7 +249,7 @@
         
         
         
-          13 分钟
+          15 分钟
         
       </span>
     
@@ -349,13 +351,17 @@
 <h2 id="Ingress"><a href="#Ingress" class="headerlink" title="Ingress"></a>Ingress</h2><p>Ingress负责管理集群HTTP&#x2F;HTTPS路由规则的资源。与Service相比，Service侧重于IP+Port进行请求转发（TCP&#x2F;UDP），Ingress通过域名URL+Path进行请求转发（HTTP&#x2F;HTTPS）。</p>
 <p>Ingress定义了路由规则，但不会自动生效，由Ingress Controller监听 Ingress 对象，由Ingress Controller根据Ingress定义的规则进行实际生效、执行路由转发。Ingress Controller会将请求转发给对应的Service，再由Service转发给对应的Pod进行执行。</p>
 <h2 id="k8s整体架构"><a href="#k8s整体架构" class="headerlink" title="k8s整体架构"></a>k8s整体架构</h2><p>k8s的整体架构图如下所示：</p>
-
+<img src="/2025/06/what-is-k8s/k8s%E7%BB%93%E6%9E%84%E5%9B%BE.jpeg" srcset="/img/loading.gif" lazyload class="" title="k8s架构图">
 
 <p>下面根据外部请求打到k8s的整个路由过程，详细介绍一下k8s的整体架构及各个组件的作用：</p>
 <ul>
 <li>外部请求访问k8s服务时，请求优先打到Ingress Controller，根据Ingress定义的规则路由给对应的Service。</li>
-<li>Kube-proxy：Kube-proxy是运行在每个Node上的网络代理组件，由该组件实现Service到Pod的路由转发及负载均衡。</li>
-<li>kubelet</li>
+<li>Kube-proxy：Kube-proxy是运行在每个Node上的网络代理组件，由该组件实现Service到Pod的路由转发及负载均衡，为Service提供cluster内部的服务发现和负载均衡。</li>
+<li>kubelet: 运行在每个节点上，启动并管理的容器最终处理请求（拉取镜像、挂载卷、调用容器运行时，启动容器）。Pod控制器就是通过kubelet实现对Pod的控制（Pod控制器定义规则PodSpec并写入etcd，由kube-scheduler分配给具体的节点，在节点上由kubelet负责最终执行）。</li>
+<li>etcd：是一个分布式的、高可用的键值数据库，采用 Raft 一致性算法 保证数据一致性，用于存储k8s中资源对象的配置和状态。</li>
+<li>kube-scheduler：负责调度决策，负责将Pod调度给指定的节点，	为集群中新建的、尚未分配节点的 Pod 选择最合适的节点。</li>
+<li>api server：k8s的控制中枢，提供restful api接口的方式，调度k8s各个组件的协作与执行，也是唯一一个可以读写etcd的组件。</li>
+<li>kubectl：是k8s官方提供的命令行工具，它发送http请求给api server，完成k8s的一系列管理运维操作。</li>
 </ul>
 
                 
@@ -403,7 +409,7 @@
   <div class="license-box my-3">
     <div class="license-title">
       <div>k8s相关概念介绍</div>
-      <div>https://xiaopengqiu.github.io/2025/06/what-is-kube/</div>
+      <div>https://xiaopengqiu.github.io/2025/06/what-is-k8s/</div>
     </div>
     <div class="license-meta">
       
