@@ -4,6 +4,31 @@
   
   
   <entry>
+    <title>go语言学习</title>
+    <link href="/2025/07/kube-scheduler/"/>
+    <url>/2025/07/kube-scheduler/</url>
+    
+    <content type="html"><![CDATA[<p>由浅入深介绍go语言中常用的基础语法，打好地基，写出优雅的代码。</p><span id="more"></span>]]></content>
+    
+    
+    <categories>
+      
+      <category>基础知识</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>go</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>k8s相关概念介绍</title>
     <link href="/2025/06/what-is-k8s/"/>
     <url>/2025/06/what-is-k8s/</url>
