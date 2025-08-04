@@ -4,6 +4,31 @@
   
   
   <entry>
+    <title>java语言学习</title>
+    <link href="/2025/08/java-base/"/>
+    <url>/2025/08/java-base/</url>
+    
+    <content type="html"><![CDATA[<p>由浅入深介绍java语言中常用的基础语法，打好地基，写出优雅的代码。</p><span id="more"></span>]]></content>
+    
+    
+    <categories>
+      
+      <category>基础知识</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>java</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>kubectl命令使用</title>
     <link href="/2025/08/how-to-use-kubectl/"/>
     <url>/2025/08/how-to-use-kubectl/</url>
