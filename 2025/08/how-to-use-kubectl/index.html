@@ -27,7 +27,7 @@
 <meta property="og:description" content="由浅入深介绍kubectl命令的使用，常用于服务器上的运维操作。">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2025-08-04T05:26:29.000Z">
-<meta property="article:modified_time" content="2025-08-31T11:40:40.001Z">
+<meta property="article:modified_time" content="2025-08-31T13:33:42.694Z">
 <meta property="article:author" content="xiaopengqiu">
 <meta property="article:tag" content="k8s">
 <meta property="article:tag" content="kubectl">
@@ -237,7 +237,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          393 字
+          617 字
         
       </span>
     
@@ -248,7 +248,7 @@
         
         
         
-          4 分钟
+          6 分钟
         
       </span>
     
@@ -425,7 +425,9 @@
 <h1 id="修改yaml"><a href="#修改yaml" class="headerlink" title="修改yaml"></a>修改yaml</h1><p>可用通过<code>edit</code>命令修改deployment的yaml字段，修改image镜像的方式来实现黑屏变更。</p>
 <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-string">kubectl</span> <span class="hljs-string">-n</span> <span class="hljs-string">kox</span> <span class="hljs-string">edit</span> <span class="hljs-string">cafedeployment</span> <span class="hljs-string">cd-name</span><br></code></pre></td></tr></table></figure>
 
-
+<h1 id="发布"><a href="#发布" class="headerlink" title="发布"></a>发布</h1><p>k8s中使用rollout控制Deployment的发布过程，指明先缩后扩、先扩后缩。<br>rollout通过读取yaml中的<strong>partition</strong>字段来实现分组发布，达到渐进式更新的效果。</p>
+<p>在云原生中，<code>partition=n</code>表示Deployment中n个pod保持旧镜像不变，其余的pod进行更新。通过逐步缩小partition的值使其最终等于0，以此来达到分批发布的效果</p>
+<p>在蚂蚁集团的cafedeployment中（控制应用的crd）刚好相反，<code>partition=n</code>表示选取 n 个pod进行更新，每次发布前会有一个webhook将partition重置为0，触发分组发布，逐步将partition的值更新为最大pod数。若webhoos失效，会导致partition经过上一次发布后置为最大pod数，导致发布一把梭。<br>同时在蚂蚁集团中，rollout不再是一种发布机制，而是一种crd，用于控制实际发布的运行。</p>
 
                 
               </div>
