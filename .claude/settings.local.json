@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run clean)",
+      "Bash(npm run build)",
+      "Bash(npm run deploy)",
+      "Bash(ping github.com)",
+      "WebFetch(domain:www.cnblogs.com)",
+      "WebSearch",
+      "Bash(curl -L -s \"https://www.cnblogs.com/imust2008/p/19564023\")",
+      "Bash(curl -L -s \"https://code.claude.com/docs/en/cli-reference\")",
+      "Bash(curl -L -s \"https://code.claude.com/docs/en/permissions#permission-modes\")",
+      "Bash(mkdir -p __TRACKED_VAR__/.claude/skills/xiaopeng-stock-review/templates)",
+      "Bash(mkdir -p __TRACKED_VAR__/.claude/skills/xiaopeng-stock-review/references)",
+      "Bash(python -c ' *)",
+      "Read(//c/Users/qxp00/.claude/skills/stock-agent-tools/**)",
+      "Bash(python test_tools.py)",
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "Bash(cd \"E:/技术学习/myExercise/multica\" && ls -la)",
+      "Read(//e/技术学习/myExercise/multica/**)",
+      "Bash(git -C .deploy_git config http.proxy http://127.0.0.1:7890)",
+      "Bash(git -C .deploy_git config https.proxy http://127.0.0.1:7890)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(gh repo *)"
+    ]
+  }
+}
