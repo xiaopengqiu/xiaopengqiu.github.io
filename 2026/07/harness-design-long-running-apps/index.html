@@ -1,0 +1,932 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="xiaopengqiu">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="文章：Harness Design for Long-Running Apps（作者：Prithvi Rajasekaran，Anthropic Labs 团队） 一、文章要解决的问题让 Claude 在无人干预下完成两件事：  产出高质量前端设计（主观品味驱动） 构建完整全栈应用（可验证的正确性驱动）  这两个领域看似相反（一个靠主观判断、一个靠客观验证），但作者发现它们共享同一类失败模式，因此">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Harness 工程分析——Anthropic 长时自主应用架构解读">
+<meta property="og:url" content="https://xiaopengqiu.github.io/2026/07/harness-design-long-running-apps/index.html">
+<meta property="og:site_name" content="风雪归程">
+<meta property="og:description" content="文章：Harness Design for Long-Running Apps（作者：Prithvi Rajasekaran，Anthropic Labs 团队） 一、文章要解决的问题让 Claude 在无人干预下完成两件事：  产出高质量前端设计（主观品味驱动） 构建完整全栈应用（可验证的正确性驱动）  这两个领域看似相反（一个靠主观判断、一个靠客观验证），但作者发现它们共享同一类失败模式，因此">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-01T09:30:00.000Z">
+<meta property="article:modified_time" content="2026-07-01T09:15:07.268Z">
+<meta property="article:author" content="xiaopengqiu">
+<meta property="article:tag" content="AI Agent">
+<meta property="article:tag" content="Claude">
+<meta property="article:tag" content="Harness 工程">
+<meta property="article:tag" content="架构设计">
+<meta property="article:tag" content="长时任务">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Harness 工程分析——Anthropic 长时自主应用架构解读 - 风雪归程</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"xiaopengqiu.github.io","root":"/","version":"1.9.8","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":"qyPrAYIAey77o4bjcc5pMipZ-gzGzoHsz","app_key":"z6pYYg24nUCBJSA52IXmNkMe","server_url":null,"path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>风雪归程</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Harness 工程分析——Anthropic 长时自主应用架构解读"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-07-01 17:30" pubdate>
+          2026年7月1日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          2.4k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          21 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Harness 工程分析——Anthropic 长时自主应用架构解读</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>文章：<a target="_blank" rel="noopener" href="https://www.anthropic.com/engineering/harness-design-long-running-apps">Harness Design for Long-Running Apps</a>（作者：Prithvi Rajasekaran，Anthropic Labs 团队）</p>
+<h2 id="一、文章要解决的问题"><a href="#一、文章要解决的问题" class="headerlink" title="一、文章要解决的问题"></a>一、文章要解决的问题</h2><p>让 Claude 在<strong>无人干预</strong>下完成两件事：</p>
+<ol>
+<li>产出<strong>高质量前端设计</strong>（主观品味驱动）</li>
+<li>构建<strong>完整全栈应用</strong>（可验证的正确性驱动）</li>
+</ol>
+<p>这两个领域看似相反（一个靠主观判断、一个靠客观验证），但作者发现它们共享同一类失败模式，因此可以用同一套 harness 思路突破。</p>
+<span id="more"></span>
+
+<hr>
+<h2 id="二、Harness-工程的核心思想"><a href="#二、Harness-工程的核心思想" class="headerlink" title="二、Harness 工程的核心思想"></a>二、Harness 工程的核心思想</h2><h3 id="1-从-GAN-借鉴的”生成-评估”对抗结构"><a href="#1-从-GAN-借鉴的”生成-评估”对抗结构" class="headerlink" title="1. 从 GAN 借鉴的”生成-评估”对抗结构"></a>1. 从 GAN 借鉴的”生成-评估”对抗结构</h3><p>核心创新：把单 Agent 的”自评自审”拆成<strong>两个独立 Agent</strong> —— Generator（生成器）与 Evaluator（评估器）。</p>
+<ul>
+<li>单 Agent 自评时倾向于”自信地夸自己”，即便输出明显平庸也打高分；</li>
+<li>把评估独立出来后，<strong>调教一个”挑剔的外部评估器”远比让生成器自我批判容易</strong>；</li>
+<li>一旦有了具体的外部反馈，生成器就有了可迭代的目标。</li>
+</ul>
+<h3 id="2-三智能体架构（Planner-Generator-Evaluator）"><a href="#2-三智能体架构（Planner-Generator-Evaluator）" class="headerlink" title="2. 三智能体架构（Planner + Generator + Evaluator）"></a>2. 三智能体架构（Planner + Generator + Evaluator）</h3><table>
+<thead>
+<tr>
+<th>角色</th>
+<th>职责</th>
+<th>关键设计</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Planner</strong></td>
+<td>把 1–4 句话的 prompt 扩展为完整产品 spec</td>
+<td>只约束”交付物”，不规定实现细节，避免错误级联；主动嵌入 AI 能力</td>
+</tr>
+<tr>
+<td><strong>Generator</strong></td>
+<td>按 spec 一次实现一个 feature</td>
+<td>sprint 制；每个 sprint 结束自评后交给 QA</td>
+</tr>
+<tr>
+<td><strong>Evaluator</strong></td>
+<td>用 Playwright MCP 像真人一样点击运行中的应用</td>
+<td>按 sprint contract 逐条打分，低于阈值即打回</td>
+</tr>
+</tbody></table>
+<h3 id="3-两条贯穿始终的工程教训（来自早期-harness-工作）"><a href="#3-两条贯穿始终的工程教训（来自早期-harness-工作）" class="headerlink" title="3. 两条贯穿始终的工程教训（来自早期 harness 工作）"></a>3. 两条贯穿始终的工程教训（来自早期 harness 工作）</h3><ul>
+<li><strong>任务分解</strong>：把大构建拆成可控的小块；</li>
+<li><strong>结构化 artifact 传递上下文</strong>：用文件在 session 之间交接状态（而非靠对话记忆）。</li>
+</ul>
+<hr>
+<h2 id="三、两个核心失败模式及对应解法"><a href="#三、两个核心失败模式及对应解法" class="headerlink" title="三、两个核心失败模式及对应解法"></a>三、两个核心失败模式及对应解法</h2><h3 id="失败模式-1：上下文膨胀-上下文焦虑（Context-Anxiety）"><a href="#失败模式-1：上下文膨胀-上下文焦虑（Context-Anxiety）" class="headerlink" title="失败模式 1：上下文膨胀 &#x2F; 上下文焦虑（Context Anxiety）"></a>失败模式 1：上下文膨胀 &#x2F; 上下文焦虑（Context Anxiety）</h3><ul>
+<li><strong>现象</strong>：context 填满后模型失忆；或模型”自以为快到上限”而提前收尾。</li>
+<li><strong>解法</strong>：<strong>Context Reset</strong> —— 清空 context、启动新 agent，通过结构化 artifact 把前一个 agent 的状态和下一步交接过去。</li>
+<li><strong>vs. Compaction</strong>：compaction 是原地摘要、保持同一 agent 继续；reset 给的是”清白起点”。Sonnet 4.5 的 context anxiety 严重到 compaction 都不够，必须 reset。代价：编排复杂度、token、延迟上升。</li>
+<li><strong>演进</strong>：Opus 4.5 起该行为大幅消失，<strong>reset 在新模型上被整个移除</strong>，改为单 session + SDK 自动 compaction。</li>
+</ul>
+<h3 id="失败模式-2：自我评估失真"><a href="#失败模式-2：自我评估失真" class="headerlink" title="失败模式 2：自我评估失真"></a>失败模式 2：自我评估失真</h3><ul>
+<li><strong>现象</strong>：Agent 评价自己作品时系统性偏正面，主观任务（设计）尤甚。</li>
+<li><strong>解法</strong>：Generator &#x2F; Evaluator 分离。分离本身不消除宽容倾向（评估器仍是 LLM），但<strong>把”挑剔”做成可调教的目标</strong>，比让生成器自我批判现实得多。</li>
+</ul>
+<hr>
+<h2 id="四、前端设计：把主观品味变成可打分项"><a href="#四、前端设计：把主观品味变成可打分项" class="headerlink" title="四、前端设计：把主观品味变成可打分项"></a>四、前端设计：把主观品味变成可打分项</h2><p>作者设计了 4 条评分准则，同时给到 Generator 和 Evaluator：</p>
+<ol>
+<li><strong>Design Quality</strong> —— 整体是否像”一个作品”而非零件堆砌（色彩&#x2F;排版&#x2F;布局&#x2F;意象共同形成 mood）；</li>
+<li><strong>Originality</strong> —— 是否有自定义决策，还是模板&#x2F;库默认&#x2F;AI 套路（如”紫渐变+白卡片”被点名扣分）；</li>
+<li><strong>Craft</strong> —— 技术执行力（层级、间距、对比度、色和谐）；</li>
+<li><strong>Functionality</strong> —— 可用性，与美观无关。</li>
+</ol>
+<p><strong>关键加权</strong>：Claude 默认 Craft &#x2F; Functionality 已经不错，但 Design &#x2F; Originality 偏平淡 → 准则显式惩罚”AI slop”通用模式，加权 Design &amp; Originality 推动”审美冒险”。</p>
+<p><strong>校准</strong>：用 few-shot 详细分数拆解校准评估器，减少跨轮次漂移。</p>
+<p><strong>循环</strong>：Generator 产出 HTML&#x2F;CSS&#x2F;JS → Evaluator 用 Playwright MCP 实际打开页面、截图、研究后打分写批评 → Generator 决策”继续精炼”或”彻底换方向”。<strong>5–15 轮&#x2F;次，单次完整跑可达 4 小时</strong>。</p>
+<p><strong>意外发现</strong>：准则措辞本身就会塑形输出 —— 比如”the best designs are museum quality”这类话让生成器向某种视觉风格收敛，说明<strong>prompt 用词直接塑造了输出性格</strong>。</p>
+<p><strong>亮点案例</strong>：荷兰美术馆网站，第 9 轮还是一个干净的暗色 landing page，第 10 轮<strong>推翻重来</strong>，变成 CSS 3D 透视房间 + 墙上自由挂画 + 门洞式导航 —— 单次生成里罕见的创造性跳跃。</p>
+<hr>
+<h2 id="五、全栈编码：三-Agent-完整流程"><a href="#五、全栈编码：三-Agent-完整流程" class="headerlink" title="五、全栈编码：三 Agent 完整流程"></a>五、全栈编码：三 Agent 完整流程</h2><h3 id="关键机制：Sprint-Contract（sprint-契约）"><a href="#关键机制：Sprint-Contract（sprint-契约）" class="headerlink" title="关键机制：Sprint Contract（sprint 契约）"></a>关键机制：Sprint Contract（sprint 契约）</h3><p>在每个 sprint 之前，Generator 与 Evaluator <strong>协商</strong>一份契约：约定这块工作”done”长什么样、怎么验证。</p>
+<ul>
+<li>存在原因：spec 故意写得高层，需要一个桥梁把 user story 落到可测实现；</li>
+<li>Generator 提案（建什么、怎么验证）→ Evaluator 审核（方向对不对）→ 迭代到达成共识 → 才写代码；</li>
+<li>通信方式：<strong>全部通过文件</strong>（一个写、另一个读并响应），保证上下文可追溯、不依赖对话历史。</li>
+</ul>
+<h3 id="实测对比（同一-prompt：2D-retro-game-maker）"><a href="#实测对比（同一-prompt：2D-retro-game-maker）" class="headerlink" title="实测对比（同一 prompt：2D retro game maker）"></a>实测对比（同一 prompt：2D retro game maker）</h3><table>
+<thead>
+<tr>
+<th>Harness</th>
+<th>时长</th>
+<th>成本</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Solo（单 Agent）</td>
+<td>20 min</td>
+<td>$9</td>
+</tr>
+<tr>
+<td>Full harness（三 Agent）</td>
+<td>6 hr</td>
+<td>$200</td>
+</tr>
+</tbody></table>
+<p>成本 20×，但质量差异立竿见影：</p>
+<ul>
+<li><strong>Solo</strong>：界面能跑、流程僵硬、entity 出现在屏幕上但<strong>完全无响应</strong>——核心玩法坏了，且代码里看不出断在哪；</li>
+<li><strong>Harness</strong>：Planner 把一句话扩展成 <strong>16 个 feature &#x2F; 10 个 sprint</strong> 的 spec（含精灵动画、行为模板、音效、AI 辅助精灵生成与关卡设计、导出分享）；Play mode 真的能玩（虽有小瑕疵如角色穿模）。</li>
+</ul>
+<h3 id="Evaluator-的实际产出（举例）"><a href="#Evaluator-的实际产出（举例）" class="headerlink" title="Evaluator 的实际产出（举例）"></a>Evaluator 的实际产出（举例）</h3><p>评估器不是泛泛而谈，而是定位到<strong>文件+行号</strong>：</p>
+<ul>
+<li><code>fillRectangle</code> 函数存在但未在 <code>mouseUp</code> 触发；</li>
+<li><code>LevelEditor.tsx:892</code> 删除键条件错配，应为 <code>selection || (selectedEntityId &amp;&amp; activeLayer === &#39;entity&#39;)</code>；</li>
+<li><code>PUT /frames/reorder</code> 路由定义在 <code>/{frame_id}</code> 之后，FastAPI 把 <code>reorder</code> 当 frame_id 解析返回 422。</li>
+</ul>
+<p>Sprint 3 一个 sprint 就有 27 条验收准则。</p>
+<h3 id="调教评估器的反模式"><a href="#调教评估器的反模式" class="headerlink" title="调教评估器的反模式"></a>调教评估器的反模式</h3><p>开箱即用的 Claude 是个差的 QA：会先识别出问题，然后**自我说服”不是大事”**放行；测试偏浅，漏掉边界。调教循环：读日志 → 找判断分歧样本 → 改 QA prompt → 反复迭代，直到评估器的判断与人一致。</p>
+<hr>
+<h2 id="六、Harness-的演进与简化（关键工程洞察）"><a href="#六、Harness-的演进与简化（关键工程洞察）" class="headerlink" title="六、Harness 的演进与简化（关键工程洞察）"></a>六、Harness 的演进与简化（关键工程洞察）</h2><blockquote>
+<p><strong>“harness 里每个组件都编码了一个’模型自身做不到’的假设，这些假设值得反复压力测试——既因为它们可能是错的，也因为模型一升级就可能过时。”</strong></p>
+</blockquote>
+<h3 id="简化原则"><a href="#简化原则" class="headerlink" title="简化原则"></a>简化原则</h3><p>“find the simplest solution possible, and only increase complexity when needed”（出自 <em>Building Effective Agents</em>）。</p>
+<h3 id="第一次激进简化失败"><a href="#第一次激进简化失败" class="headerlink" title="第一次激进简化失败"></a>第一次激进简化失败</h3><p>砍到只剩骨架 + 加新想法 → 性能掉得无法复现，且<strong>分不清哪些组件是 load-bearing</strong>。</p>
+<p>→ 改为<strong>一次只拆一个组件、观察影响</strong>的方法论。</p>
+<h3 id="Opus-4-6-带来的简化机会"><a href="#Opus-4-6-带来的简化机会" class="headerlink" title="Opus 4.6 带来的简化机会"></a>Opus 4.6 带来的简化机会</h3><p>4.6 官方改进：planning 更稳、长任务持续更久、大代码库更可靠、自查&#x2F;调试更强、长上下文检索更好 —— 这些正是 harness 之前补的短板。</p>
+<h3 id="具体动作"><a href="#具体动作" class="headerlink" title="具体动作"></a>具体动作</h3><ol>
+<li><strong>移除 sprint construct</strong> —— 4.6 原生能管理大任务，不再需要外部分解；</li>
+<li><strong>保留 Planner</strong>（去掉后 Generator 会欠 scope、直接开建、feature 变少）；</li>
+<li><strong>保留 Evaluator，但从 per-sprint 改为单次 end-of-run</strong> —— 因为模型变强后，”评估器是否必要”取决于任务是否落在模型能独立搞定的边界之外；</li>
+<li><strong>新增</strong>：让 Generator 真正构建一个能通过工具驱动应用自身功能的 agent（这部分知识训练数据覆盖薄，需要大量迭代调教）。</li>
+</ol>
+<h3 id="DAW（数字音频工作站）实测"><a href="#DAW（数字音频工作站）实测" class="headerlink" title="DAW（数字音频工作站）实测"></a>DAW（数字音频工作站）实测</h3><p>prompt：<code>Build a fully featured DAW in the browser using the Web Audio API.</code></p>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>时长</th>
+<th>成本</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Planner</td>
+<td>4.7 min</td>
+<td>$0.46</td>
+</tr>
+<tr>
+<td>Build R1</td>
+<td>2h 7min</td>
+<td>$71.08</td>
+</tr>
+<tr>
+<td>QA R1</td>
+<td>8.8 min</td>
+<td>$3.24</td>
+</tr>
+<tr>
+<td>Build R2</td>
+<td>1h 2min</td>
+<td>$36.89</td>
+</tr>
+<tr>
+<td>QA R2</td>
+<td>6.8 min</td>
+<td>$3.09</td>
+</tr>
+<tr>
+<td>Build R3</td>
+<td>10.9 min</td>
+<td>$5.88</td>
+</tr>
+<tr>
+<td>QA R3</td>
+<td>9.6 min</td>
+<td>$4.06</td>
+</tr>
+<tr>
+<td><strong>合计</strong></td>
+<td><strong>3h 50min</strong></td>
+<td><strong>$124.70</strong></td>
+</tr>
+</tbody></table>
+<p>Generator 连续跑了 2 小时+ 无需 sprint 分解仍保持连贯。QA 仍抓到实质缺口（clips 不能拖动、录音只是按钮空转、效果器是数字滑块而非图形 EQ 曲线），证明<strong>评估器在”最后一公里”仍有价值</strong>。</p>
+<p>局限：Claude 听不见声音 → 音乐品味的反馈环失效。</p>
+<hr>
+<h2 id="七、技术难点总结"><a href="#七、技术难点总结" class="headerlink" title="七、技术难点总结"></a>七、技术难点总结</h2><ol>
+<li><p><strong>Context Anxiety 的识别与权衡</strong>：reset 解决了焦虑但带来编排&#x2F;token&#x2F;延迟成本；判断”何时 reset、何时 compaction”需要对模型行为的实证观察（Sonnet 4.5 必须 reset，Opus 4.5&#x2F;4.6 不需要）。</p>
+</li>
+<li><p><strong>主观品质的可量化</strong>：把”美不美”转成”是否符合设计原则”，再用 few-shot 锚定评估器偏好，避免分数漂移。准则措辞本身会塑形输出，是个杠杆也是个雷。</p>
+</li>
+<li><p><strong>Evaluator 的调教难度</strong>：开箱 Claude 是差的 QA（自我说服放行、测试偏浅），需要”读日志 → 找分歧 → 改 prompt”的多轮开发循环，且要让它定位到文件+行号才有可执行性。</p>
+</li>
+<li><p><strong>Load-bearing 组件的识别</strong>：砍组件要一次一个、对照观察，否则性能掉下来分不清是哪个组件的功劳。这是 harness 维护的元方法论。</p>
+</li>
+<li><p><strong>Spec 粒度的平衡</strong>：Planner 故意只写高层 spec（怕错级联），但又需要 sprint contract 把高层 spec 桥接到可测实现 —— 两层抽象分工明确。</p>
+</li>
+<li><p><strong>跨 session 上下文交接</strong>：用文件通信而非对话，保证 artifact 可追溯、可被新 agent 独立读取。</p>
+</li>
+<li><p><strong>模型升级 vs. Harness 复杂度的反向关系</strong>：模型越强，某些 harness 组件从”必需”变”冗余”，但<strong>新模型也打开了”做更难任务”的空间</strong>，需要新增组件去填补新边界 —— harness 的”有趣组合空间”不会随模型进步而收缩，只会迁移。</p>
+</li>
+</ol>
+<hr>
+<h2 id="八、一句话核心结论"><a href="#八、一句话核心结论" class="headerlink" title="八、一句话核心结论"></a>八、一句话核心结论</h2><blockquote>
+<p>用 GAN 式的”生成-评估”分离 + 结构化 artifact 跨 session 交接，把长时自主编码从”单 Agent 自评自嗨”变成”Planner 规划、Generator 实现、Evaluator 挑刺”的可迭代闭环；模型变强时<strong>主动拆除已过时的脚手架、保留仍有价值的部分</strong>，并在新能力打开的边界上重新加件 —— 这是 harness 工程的元方法论。</p>
+</blockquote>
+<p>值得收藏的工程金句：</p>
+<blockquote>
+<p><strong>“harness 中每个组件都是关于’模型做不到什么’的假设，模型升级时这些假设最值得被压力测试。”</strong></p>
+</blockquote>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8B%A5%E6%8A%B1Agent/" class="category-chain-item">拥抱Agent</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/AI-Agent/" class="print-no-link">#AI Agent</a>
+      
+        <a href="/tags/%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1/" class="print-no-link">#架构设计</a>
+      
+        <a href="/tags/Claude/" class="print-no-link">#Claude</a>
+      
+        <a href="/tags/%E9%95%BF%E6%97%B6%E4%BB%BB%E5%8A%A1/" class="print-no-link">#长时任务</a>
+      
+        <a href="/tags/Harness-%E5%B7%A5%E7%A8%8B/" class="print-no-link">#Harness 工程</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Harness 工程分析——Anthropic 长时自主应用架构解读</div>
+      <div>https://xiaopengqiu.github.io/2026/07/harness-design-long-running-apps/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>xiaopengqiu</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年7月1日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/06/agent-team-engineering-patterns/" title="Agent Team 工程范式：从 while 循环到自治协作">
+                        <span class="hidden-mobile">Agent Team 工程范式：从 while 循环到自治协作</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.5.1/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"qyPrAYIAey77o4bjcc5pMipZ-gzGzoHsz","appKey":"z6pYYg24nUCBJSA52IXmNkMe","path":"window.location.pathname","placeholder":"说点什么","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+
+</div>
+
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

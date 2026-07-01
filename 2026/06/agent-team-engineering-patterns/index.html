@@ -1,0 +1,917 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="xiaopengqiu">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Anthropic 的《Building a C compiler with a team of parallel Claudes》真正值得学习的地方，不是”AI 写出了 C 编译器”这个结果，而是背后一套可以复用的 Agent Team 工程范式：用极简循环让 agent 长时间运行，用共享 Git 仓库和文件锁完成协作，用高质量测试和结构化日志提供反馈，再把不可并行的复杂任务拆成可并行的小任务">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Agent Team 工程范式：从 while 循环到自治协作">
+<meta property="og:url" content="https://xiaopengqiu.github.io/2026/06/agent-team-engineering-patterns/index.html">
+<meta property="og:site_name" content="风雪归程">
+<meta property="og:description" content="Anthropic 的《Building a C compiler with a team of parallel Claudes》真正值得学习的地方，不是”AI 写出了 C 编译器”这个结果，而是背后一套可以复用的 Agent Team 工程范式：用极简循环让 agent 长时间运行，用共享 Git 仓库和文件锁完成协作，用高质量测试和结构化日志提供反馈，再把不可并行的复杂任务拆成可并行的小任务">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-06-30T15:55:00.000Z">
+<meta property="article:modified_time" content="2026-07-01T09:14:24.176Z">
+<meta property="article:author" content="xiaopengqiu">
+<meta property="article:tag" content="AI Agent">
+<meta property="article:tag" content="Agent Team">
+<meta property="article:tag" content="Claude Code">
+<meta property="article:tag" content="工程实践">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Agent Team 工程范式：从 while 循环到自治协作 - 风雪归程</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"xiaopengqiu.github.io","root":"/","version":"1.9.8","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":"qyPrAYIAey77o4bjcc5pMipZ-gzGzoHsz","app_key":"z6pYYg24nUCBJSA52IXmNkMe","server_url":null,"path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>风雪归程</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Agent Team 工程范式：从 while 循环到自治协作"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-06-30 23:55" pubdate>
+          2026年6月30日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          3.8k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          32 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Agent Team 工程范式：从 while 循环到自治协作</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>Anthropic 的《Building a C compiler with a team of parallel Claudes》真正值得学习的地方，不是”AI 写出了 C 编译器”这个结果，而是背后一套可以复用的 Agent Team 工程范式：用极简循环让 agent 长时间运行，用共享 Git 仓库和文件锁完成协作，用高质量测试和结构化日志提供反馈，再把不可并行的复杂任务拆成可并行的小任务。</p>
+<span id="more"></span>
+
+<p>原文地址：<a target="_blank" rel="noopener" href="https://www.anthropic.com/engineering/building-c-compiler">Building a C compiler with a team of parallel Claudes</a></p>
+<h2 id="一、核心思想：不是聊天，而是持续执行"><a href="#一、核心思想：不是聊天，而是持续执行" class="headerlink" title="一、核心思想：不是聊天，而是持续执行"></a>一、核心思想：不是聊天，而是持续执行</h2><p>传统 LLM 使用方式是”人问一句，模型答一句”。Claude Code 这类工具把模型推进到 pair programming：它能读代码、改文件、跑测试，但默认仍然会在很多节点停下来等人确认。</p>
+<p>Agent Team 的第一步，是把这种交互式模式改造成<strong>持续执行系统</strong>。作者使用的核心 harness 非常简单：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-meta">#!/bin/bash</span><br><span class="hljs-keyword">while</span> <span class="hljs-literal">true</span>; <span class="hljs-keyword">do</span><br>  COMMIT=$(git rev-parse --short=6 HEAD)<br>  LOGFILE=<span class="hljs-string">&quot;agent_logs/agent_<span class="hljs-variable">$&#123;COMMIT&#125;</span>.log&quot;</span><br>  claude --dangerously-skip-permissions \<br>    -p <span class="hljs-string">&quot;<span class="hljs-subst">$(cat AGENT_PROMPT.md)</span>&quot;</span> \<br>    --model claude-opus-X-Y &amp;&gt; <span class="hljs-string">&quot;<span class="hljs-variable">$LOGFILE</span>&quot;</span><br><span class="hljs-keyword">done</span><br></code></pre></td></tr></table></figure>
+
+<p>这个脚本的关键不在 bash 技巧，而在它改变了 agent 的工作形态：</p>
+<ol>
+<li><code>while true</code> 让每次会话结束后立刻启动下一次，模型没有”等用户继续”的默认退路。</li>
+<li>prompt 放在 <code>AGENT_PROMPT.md</code> 中，意味着 agent 的行为规范可以像代码一样版本化。</li>
+<li>日志按 commit hash 命名，方便回溯每一轮 agent 从哪个状态开始、做了什么、失败在哪里。</li>
+<li><code>--dangerously-skip-permissions</code> 取消交互确认，使无人值守成为可能，但也要求必须在容器中运行。</li>
+</ol>
+<p>这里的范式可以概括为：<strong>让 agent 每轮只负责局部推进，但系统层面通过循环保证整体持续前进</strong>。</p>
+<p>这和人类团队很像。一个工程师每天只解决有限的问题，但如果任务板、代码仓库、CI 和文档持续存在，整个项目就能长期演进。Agent Team 要做的，就是给模型搭出类似的工程环境。</p>
+<h2 id="二、协作拓扑：共享-Git，而不是中心调度器"><a href="#二、协作拓扑：共享-Git，而不是中心调度器" class="headerlink" title="二、协作拓扑：共享 Git，而不是中心调度器"></a>二、协作拓扑：共享 Git，而不是中心调度器</h2><p>很多 multi-agent 框架会引入一个 orchestrator：中心 agent 拆任务、派任务、收结果。作者选择了更朴素的方案：没有中心调度器，所有 agent 平等自治。</p>
+<p>整体结构大致是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs text">宿主机：<br>  /upstream  一个 bare git repo，作为共享事实源<br><br>Agent 1 容器：<br>  /workspace 从 /upstream clone 出来的本地仓库<br><br>Agent 2 容器：<br>  /workspace 从 /upstream clone 出来的本地仓库<br><br>Agent N 容器：<br>  /workspace 从 /upstream clone 出来的本地仓库<br></code></pre></td></tr></table></figure>
+
+<p>每个 agent 都有独立容器、独立文件系统、独立进程空间。它们通过 Git 同步代码，通过仓库里的文档理解状态，通过锁文件认领任务。完成后再 <code>pull</code>、解决冲突、<code>push</code> 回 upstream。</p>
+<p>这个设计有几个好处：</p>
+<ul>
+<li><strong>简单</strong>：不需要 Redis、数据库、消息队列或复杂调度服务。</li>
+<li><strong>可审计</strong>：每次修改都在 Git 历史里，agent 的协作痕迹天然可追踪。</li>
+<li><strong>容错</strong>：某个 agent 容器挂掉，不会破坏其他 agent 的运行环境。</li>
+<li><strong>自治</strong>：每个 agent 可以根据当前仓库状态自己决定下一步，而不是等待中心指令。</li>
+</ul>
+<p>这套结构的本质，是把 Git 当作 multi-agent 系统的共享内存和一致性边界。</p>
+<h2 id="三、锁机制：用文件系统做任务认领"><a href="#三、锁机制：用文件系统做任务认领" class="headerlink" title="三、锁机制：用文件系统做任务认领"></a>三、锁机制：用文件系统做任务认领</h2><p>并行 agent 最大的问题是重复劳动：16 个 agent 如果都看到同一个失败测试，很可能同时去修同一个 bug。作者的解决方案非常直接：在仓库中放一个 <code>current_tasks/</code> 目录，每个 agent 开始任务前写入一个文本文件作为锁。</p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs text">current_tasks/parse_if_statement.txt<br>current_tasks/codegen_function_call.txt<br>current_tasks/fix_sqlite_struct_layout.txt<br></code></pre></td></tr></table></figure>
+
+<p>锁文件可以包含：</p>
+<ul>
+<li>任务目标；</li>
+<li>当前假设；</li>
+<li>已尝试但失败的方法；</li>
+<li>相关测试命令；</li>
+<li>预计修改范围。</li>
+</ul>
+<p>如果两个 agent 同时抢同一个任务，Git push 会暴露冲突或拒绝其中一方。失败的 agent 重新拉取最新状态后，就能看到任务已经被认领，转而选择其他任务。</p>
+<p>这不是严格意义上的分布式锁服务，但在这个场景里足够有效。原因是 agent 的任务粒度通常以分钟到小时计，不需要毫秒级锁竞争；Git 的原子 push 已经提供了足够好的冲突检测。</p>
+<p>更重要的是，锁文件本身也是上下文。下一个 agent 不只知道”这个任务被占了”，还知道”谁在做、为什么做、已经试过什么”。</p>
+<h2 id="四、自治决策：让每个-agent-自己找下一步"><a href="#四、自治决策：让每个-agent-自己找下一步" class="headerlink" title="四、自治决策：让每个 agent 自己找下一步"></a>四、自治决策：让每个 agent 自己找下一步</h2><p>这篇文章里最反直觉的一点，是作者没有设计一个全局任务分配系统。每个 agent 启动后，需要自己阅读：</p>
+<ul>
+<li>README；</li>
+<li>progress 文档；</li>
+<li>当前失败测试；</li>
+<li><code>current_tasks/</code> 锁文件；</li>
+<li>最近提交；</li>
+<li>测试日志。</li>
+</ul>
+<p>然后它自己判断：”现在最值得推进的事情是什么？”</p>
+<p>这种自治决策的前提，是仓库必须被设计成 agent 友好的环境。也就是说，人类不能只写给人看的文档，还要写给下一轮模型看的状态文件。</p>
+<p>一个有效的 progress 文档通常要包含：</p>
+<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><code class="hljs markdown"><span class="hljs-section">## 当前目标</span><br><br>让编译器通过 GCC torture test 中剩余的 struct/union 相关失败用例。<br><br><span class="hljs-section">## 已知状态</span><br><br><span class="hljs-bullet">-</span> 总通过率：97.8%<br><span class="hljs-bullet">-</span> 最近新增回归：无<br><span class="hljs-bullet">-</span> 主要失败集中在 bit-field layout 和 variadic function ABI<br><br><span class="hljs-section">## 不要重复尝试</span><br><br><span class="hljs-bullet">-</span> 单纯改 parser 无法修复当前 bit-field 失败，问题在布局阶段<br><span class="hljs-bullet">-</span> 直接按 x86 ABI 写死会破坏 ARM/RISC-V<br><br><span class="hljs-section">## 下一步建议</span><br><br><span class="hljs-bullet">-</span> 优先检查 layout.rs 中 packed struct 的 alignment 计算<br><span class="hljs-bullet">-</span> 先跑 fast test，再跑完整 torture 子集<br></code></pre></td></tr></table></figure>
+
+<p>这类文档的价值，是把 agent 的短期记忆外化为项目状态。单个 Claude 会话会结束，上下文窗口会清空，但仓库里的文档会留下来。</p>
+<h2 id="五、反馈系统：测试是-agent-的方向盘"><a href="#五、反馈系统：测试是-agent-的方向盘" class="headerlink" title="五、反馈系统：测试是 agent 的方向盘"></a>五、反馈系统：测试是 agent 的方向盘</h2><p>自治 agent 最大的风险不是”它不会工作”，而是”它很努力地解决了错误的问题”。</p>
+<p>因此，Agent Team 的核心不是循环脚本，而是测试与反馈系统。作者明确提到，他的大部分精力花在设计 agent 周围的环境：测试、日志、构建脚本、验证器和 CI。</p>
+<p>对 agent 来说，测试不只是质量保障，更是任务定义。你给它什么测试，它就会朝什么方向优化。如果测试模糊、误报、漏报，agent 会非常认真地把错误目标做到极致。</p>
+<p>一个适合 agent 的测试 harness，需要满足几条原则：</p>
+<h3 id="1-输出短，但信息密度高"><a href="#1-输出短，但信息密度高" class="headerlink" title="1. 输出短，但信息密度高"></a>1. 输出短，但信息密度高</h3><p>不要让测试命令在终端里刷几千行无意义输出。长输出会污染上下文，模型很容易在噪声中丢失重点。</p>
+<p>更好的做法是：</p>
+<ul>
+<li>控制台只打印摘要；</li>
+<li>详细日志写入文件；</li>
+<li>错误行统一包含 <code>ERROR</code>；</li>
+<li>失败原因和文件路径放在同一行，方便 <code>grep ERROR</code>；</li>
+<li>预先计算通过率、失败分布、回归数量。</li>
+</ul>
+<p>示例：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs text">SUMMARY total=12840 passed=12691 failed=149 pass_rate=98.84%<br>ERROR test=bitfield_pack_017 arch=riscv reason=&quot;field offset mismatch&quot; log=logs/bitfield_pack_017.riscv.log<br>ERROR test=varargs_042 arch=x86_64 reason=&quot;callee saved register clobbered&quot; log=logs/varargs_042.x86_64.log<br></code></pre></td></tr></table></figure>
+
+<p>这不是给人类看的传统日志，而是给 LLM 工具调用看的导航信息。</p>
+<h3 id="2-提供-fast-mode"><a href="#2-提供-fast-mode" class="headerlink" title="2. 提供 fast mode"></a>2. 提供 fast mode</h3><p>Claude 没有稳定的时间感。如果每次都跑完整测试，它可能花几个小时等待，而没有意识到这对当前迭代不划算。</p>
+<p>所以测试系统需要提供 <code>--fast</code> 模式：</p>
+<ul>
+<li>只跑 1% 或 10% 的样本；</li>
+<li>对同一个 agent 保持确定性，便于比较改动前后；</li>
+<li>不同 agent 的样本不同，整体并行覆盖更多空间；</li>
+<li>快速发现明显回归，再决定是否跑完整测试。</li>
+</ul>
+<p>这相当于给 agent 一套便宜的局部反馈，让它能高频试错。</p>
+<h3 id="3-CI-必须阻止回归"><a href="#3-CI-必须阻止回归" class="headerlink" title="3. CI 必须阻止回归"></a>3. CI 必须阻止回归</h3><p>项目后期最常见的问题，是 agent 修一个失败测试时破坏已经通过的功能。此时单靠 prompt 提醒”不要破坏现有功能”是不够的，必须让 CI 成为硬约束。</p>
+<p>有效的规则应该是：</p>
+<ul>
+<li>新提交不能降低核心测试通过率；</li>
+<li>已修复的回归测试必须固定下来；</li>
+<li>新功能必须带最小复现用例；</li>
+<li>对架构级修改要求跑更大范围测试。</li>
+</ul>
+<p>Agent Team 不是不需要工程纪律，而是比人类团队更依赖工程纪律。</p>
+<h2 id="六、任务并行化：用-oracle-切开大问题"><a href="#六、任务并行化：用-oracle-切开大问题" class="headerlink" title="六、任务并行化：用 oracle 切开大问题"></a>六、任务并行化：用 oracle 切开大问题</h2><p>并行 agent 对”大量独立失败测试”非常有效。比如还有 300 个测试失败，每个 agent 认领一个失败用例，修完后提交，这就是天然并行。</p>
+<p>但有些任务不是这样。编译 Linux 内核就是一个巨型问题：内核启动失败时，所有 agent 看到的是同一个崩溃现象。它们会同时追同一个 bug，互相覆盖修改，并行效率很低。</p>
+<p>作者的关键做法，是引入 GCC 作为 oracle，把巨型问题切成小问题：</p>
+<ol>
+<li>大部分内核文件先用 GCC 编译，认为这些对象文件是可信的。</li>
+<li>只挑一小部分文件用 Claude 写的 C 编译器编译。</li>
+<li>如果内核能启动，说明这批文件大概率没问题。</li>
+<li>如果内核失败，就继续替换、二分、缩小范围。</li>
+<li>最终把问题定位到具体文件，甚至具体文件组合。</li>
+</ol>
+<p>这是一种非常重要的模式：<strong>当任务本身不可并行时，不要强行增加 agent，而是先设计一个能把任务切碎的验证器</strong>。</p>
+<p>在其他领域也可以复用：</p>
+<ul>
+<li>Web 迁移：用旧系统作为 oracle，对比新旧页面 HTML、截图、接口响应。</li>
+<li>数据处理：用老 pipeline 作为 oracle，对比抽样数据的结果差异。</li>
+<li>编译器&#x2F;解释器：用成熟实现作为 oracle，做 differential testing。</li>
+<li>API 重构：同时调用新旧接口，对比状态码、字段、边界行为。</li>
+</ul>
+<p>好的 oracle 能把”系统整体不工作”变成”这 37 个样本里有 4 个不一致”，而后者才适合 agent 并行处理。</p>
+<h2 id="七、角色化：不是所有-agent-都去修-bug"><a href="#七、角色化：不是所有-agent-都去修-bug" class="headerlink" title="七、角色化：不是所有 agent 都去修 bug"></a>七、角色化：不是所有 agent 都去修 bug</h2><p>当项目变大后，让所有 agent 都做同一种事情会浪费能力。作者后来引入了角色化 agent：</p>
+<ul>
+<li>去重 agent：查找重复实现，合并相似逻辑。</li>
+<li>性能 agent：优化编译器自身速度。</li>
+<li>代码生成 agent：提升输出目标代码质量。</li>
+<li>Rust 评审 agent：从 Rust 工程设计角度批评结构。</li>
+<li>文档 agent：维护 README、进度、已知问题和使用说明。</li>
+</ul>
+<p>角色化不是复杂的组织架构，而是不同 prompt 的结果。它的核心价值是让 agent 的注意力变窄：一个 agent 不需要同时关心所有问题，只要在一个维度上持续扫描项目。</p>
+<p>这对实际工程很有启发。比如一个应用项目可以并行跑：</p>
+<ul>
+<li>feature agent：按 issue 实现功能；</li>
+<li>test agent：补充失败用例和回归测试；</li>
+<li>refactor agent：降低重复和复杂度；</li>
+<li>security agent：检查鉴权、输入校验、敏感信息；</li>
+<li>docs agent：同步接口文档和运维手册。</li>
+</ul>
+<p>它们不需要一个精密的会议机制，只要共享仓库、共享 CI、共享任务锁和清晰的状态文档。</p>
+<h2 id="八、Prompt-不是命令，而是操作系统规则"><a href="#八、Prompt-不是命令，而是操作系统规则" class="headerlink" title="八、Prompt 不是命令，而是操作系统规则"></a>八、Prompt 不是命令，而是操作系统规则</h2><p>在普通对话里，prompt 是一次性指令。在 Agent Team 里，<code>AGENT_PROMPT.md</code> 更像一个小型操作系统规则，定义 agent 应该如何在环境中生存。</p>
+<p>一个可执行的 agent prompt 至少要说明：</p>
+<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><code class="hljs markdown"><span class="hljs-section">## 目标</span><br><br>持续推进项目，优先修复测试失败和明确的功能缺口。<br><br><span class="hljs-section">## 工作方式</span><br><br><span class="hljs-bullet">1.</span> 开始前读取 README、progress 和 current<span class="hljs-emphasis">_tasks。</span><br><span class="hljs-emphasis">2. 选择一个未被锁定的小任务。</span><br><span class="hljs-emphasis">3. 在 current_</span>tasks 中创建任务文件，写明目标和计划。<br><span class="hljs-bullet">4.</span> 先运行最小相关测试，确认当前失败。<br><span class="hljs-bullet">5.</span> 修改代码后运行 fast test。<br><span class="hljs-bullet">6.</span> 通过后运行更完整的相关测试。<br><span class="hljs-bullet">7.</span> 更新 progress，记录成功、失败和下一步。<br><span class="hljs-bullet">8.</span> 提交并推送。<br><span class="hljs-bullet">9.</span> 如果遇到冲突，拉取、合并、重新测试。<br><br><span class="hljs-section">## 禁止事项</span><br><br><span class="hljs-bullet">-</span> 不要删除其他 agent 的锁文件，除非确认任务已废弃。<br><span class="hljs-bullet">-</span> 不要用跳过测试的方式制造通过。<br><span class="hljs-bullet">-</span> 不要把大段无关日志写进 progress。<br><span class="hljs-bullet">-</span> 不要在没有容器隔离的环境里执行危险命令。<br></code></pre></td></tr></table></figure>
+
+<p>这样的 prompt 不追求文学性，而追求可执行、可恢复、可审计。</p>
+<h2 id="九、可以直接复用的-Agent-Team-最小架构"><a href="#九、可以直接复用的-Agent-Team-最小架构" class="headerlink" title="九、可以直接复用的 Agent Team 最小架构"></a>九、可以直接复用的 Agent Team 最小架构</h2><p>如果要把这篇文章的方法迁移到自己的项目，可以从一个最小版本开始：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs text">repo/<br>  AGENT_PROMPT.md<br>  README.md<br>  progress.md<br>  current_tasks/<br>  agent_logs/<br>  scripts/<br>    test_fast.sh<br>    test_full.sh<br></code></pre></td></tr></table></figure>
+
+<p>运行拓扑：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs text">host bare repo<br>  ├── agent-1 container -&gt; local clone<br>  ├── agent-2 container -&gt; local clone<br>  ├── agent-3 container -&gt; local clone<br>  └── agent-N container -&gt; local clone<br></code></pre></td></tr></table></figure>
+
+<p>最小闭环：</p>
+<ol>
+<li>每个 agent 从同一个 upstream clone。</li>
+<li>启动后读取 <code>AGENT_PROMPT.md</code> 和 <code>progress.md</code>。</li>
+<li>在 <code>current_tasks/</code> 中创建锁文件。</li>
+<li>执行小步修改。</li>
+<li>跑 <code>scripts/test_fast.sh</code>。</li>
+<li>通过后跑相关完整测试。</li>
+<li>更新文档和日志。</li>
+<li>commit、pull、解决冲突、push。</li>
+<li>外层 <code>while true</code> 启动下一轮。</li>
+</ol>
+<p>这个版本不优雅，但可理解、可调试、可逐步增强。</p>
+<h2 id="十、边界：测试通过不等于可以上线"><a href="#十、边界：测试通过不等于可以上线" class="headerlink" title="十、边界：测试通过不等于可以上线"></a>十、边界：测试通过不等于可以上线</h2><p>Agent Team 会制造一种危险幻觉：既然测试通过，代码也能跑，那是不是可以直接部署？</p>
+<p>不能。</p>
+<p>自治 agent 的产出尤其需要人类审查，原因有三点：</p>
+<ol>
+<li>测试只覆盖你想到的行为，不能证明需求完整。</li>
+<li>agent 可能用脆弱、重复、难维护的方式让测试通过。</li>
+<li>安全、性能、可观测性、运维成本往往不在单个测试里体现。</li>
+</ol>
+<p>所以更合理的定位是：Agent Team 适合把大量可验证工作快速推进到”候选完成”状态，然后由人类做架构、安全和产品层面的验收。</p>
+<p>它不是替代工程纪律，而是放大工程纪律。测试、CI、日志、隔离、任务拆分、代码评审越扎实，agent team 的效果越好；这些基础越薄弱，agent 只是更快地制造混乱。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这篇 Anthropic 文章给出的不是一个复杂框架，而是一组朴素但强大的工程原则：</p>
+<ul>
+<li>用 <code>while true</code> 把 agent 从一次性助手变成持续执行者。</li>
+<li>用容器隔离危险能力。</li>
+<li>用共享 Git 仓库作为事实源。</li>
+<li>用 <code>current_tasks/</code> 文件锁避免重复劳动。</li>
+<li>不强依赖 orchestrator，让 agent 自治判断下一步。</li>
+<li>把 README、progress 和日志设计成 LLM 可读的外部记忆。</li>
+<li>用高质量测试和结构化输出给 agent 提供方向盘。</li>
+<li>用 oracle 和差分测试把巨型任务切成可并行小任务。</li>
+<li>用角色化 prompt 让不同 agent 长期关注不同质量维度。</li>
+<li>最后保留人类验收，因为测试通过不等于工程完成。</li>
+</ul>
+<p>如果说过去的 AI 编程是”让模型帮我写一段代码”，Agent Team 的新范式就是”为模型建一个能持续工作的工程环境”。真正的门槛不在模型会不会写代码，而在我们能不能把目标、反馈、边界和协作机制设计得足够清晰。</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8B%A5%E6%8A%B1Agent/" class="category-chain-item">拥抱Agent</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Claude-Code/" class="print-no-link">#Claude Code</a>
+      
+        <a href="/tags/AI-Agent/" class="print-no-link">#AI Agent</a>
+      
+        <a href="/tags/Agent-Team/" class="print-no-link">#Agent Team</a>
+      
+        <a href="/tags/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5/" class="print-no-link">#工程实践</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Agent Team 工程范式：从 while 循环到自治协作</div>
+      <div>https://xiaopengqiu.github.io/2026/06/agent-team-engineering-patterns/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>xiaopengqiu</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年6月30日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/07/harness-design-long-running-apps/" title="Harness 工程分析——Anthropic 长时自主应用架构解读">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Harness 工程分析——Anthropic 长时自主应用架构解读</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/06/claude-loop-mechanism-deep-dive/" title="Claude Code /loop 机制深度解析：与 ralph-loop 的对比">
+                        <span class="hidden-mobile">Claude Code /loop 机制深度解析：与 ralph-loop 的对比</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.5.1/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"qyPrAYIAey77o4bjcc5pMipZ-gzGzoHsz","appKey":"z6pYYg24nUCBJSA52IXmNkMe","path":"window.location.pathname","placeholder":"说点什么","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+
+</div>
+
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

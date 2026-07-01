@@ -1,0 +1,1204 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="xiaopengqiu">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="项目简介LangGraph 是 LangChain 团队推出的基于**图论（Pregel 模型）**的有状态 Agent 编排框架，GitHub 11k+ 星，MIT 许可。它将 Agent 工作流建模为有向图，节点通过共享状态（Channel）进行通信，核心运行时保证了持久化执行和可恢复性。 与 CrewAI（角色&#x2F;任务抽象）、AutoGen（对话协议）、Dify（低代码 DAG）等框">
+<meta property="og:type" content="article">
+<meta property="og:title" content="LangGraph 源码解析：Pregel 驱动的 Agent 编排架构与竞品深度对比">
+<meta property="og:url" content="https://xiaopengqiu.github.io/2026/06/langgraph-architecture-deep-dive/index.html">
+<meta property="og:site_name" content="风雪归程">
+<meta property="og:description" content="项目简介LangGraph 是 LangChain 团队推出的基于**图论（Pregel 模型）**的有状态 Agent 编排框架，GitHub 11k+ 星，MIT 许可。它将 Agent 工作流建模为有向图，节点通过共享状态（Channel）进行通信，核心运行时保证了持久化执行和可恢复性。 与 CrewAI（角色&#x2F;任务抽象）、AutoGen（对话协议）、Dify（低代码 DAG）等框">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-06-09T02:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-01T09:13:20.107Z">
+<meta property="article:author" content="xiaopengqiu">
+<meta property="article:tag" content="AI Agent">
+<meta property="article:tag" content="LangGraph">
+<meta property="article:tag" content="Python">
+<meta property="article:tag" content="开源项目">
+<meta property="article:tag" content="架构设计">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>LangGraph 源码解析：Pregel 驱动的 Agent 编排架构与竞品深度对比 - 风雪归程</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"xiaopengqiu.github.io","root":"/","version":"1.9.8","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":"qyPrAYIAey77o4bjcc5pMipZ-gzGzoHsz","app_key":"z6pYYg24nUCBJSA52IXmNkMe","server_url":null,"path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>风雪归程</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="LangGraph 源码解析：Pregel 驱动的 Agent 编排架构与竞品深度对比"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-06-09 10:00" pubdate>
+          2026年6月9日 上午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          2.9k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          25 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">LangGraph 源码解析：Pregel 驱动的 Agent 编排架构与竞品深度对比</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="项目简介"><a href="#项目简介" class="headerlink" title="项目简介"></a>项目简介</h2><p>LangGraph 是 LangChain 团队推出的基于**图论（Pregel 模型）**的有状态 Agent 编排框架，GitHub 11k+ 星，MIT 许可。它将 Agent 工作流建模为有向图，节点通过共享状态（Channel）进行通信，核心运行时保证了持久化执行和可恢复性。</p>
+<p>与 CrewAI（角色&#x2F;任务抽象）、AutoGen（对话协议）、Dify（低代码 DAG）等框架不同，LangGraph 选择了最底层的图原语抽象，将分布式系统的成熟理念（Pregel、BSP、Checkpoint）系统性地引入 Agent 编排领域。</p>
+<span id="more"></span>
+
+<h2 id="一、整体架构"><a href="#一、整体架构" class="headerlink" title="一、整体架构"></a>一、整体架构</h2><h3 id="Monorepo-结构"><a href="#Monorepo-结构" class="headerlink" title="Monorepo 结构"></a>Monorepo 结构</h3><figure class="highlight pgsql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs pgsql">libs/<br>├── langgraph/          # 核心框架 v1<span class="hljs-number">.2</span><span class="hljs-number">.4</span><br>│   └── langgraph/<br>│       ├── pregel/     # Pregel 执行引擎（_loop.py <span class="hljs-number">1964</span>行）<br>│       ├── channels/   # Channel 类型系统<br>│       ├── graph/      # StateGraph 构建器<br>│       ├── func/       # 函数式 API（entrypoint/task）<br>│       ├── managed/    # Managed Isolated <span class="hljs-keyword">Value</span><br>│       ├── stream/     # 流式输出变换器<br>│       └── _internal/  # 内部常量与工具<br>├── <span class="hljs-keyword">checkpoint</span>/         # <span class="hljs-keyword">Checkpoint</span> 抽象层（独立包）<br>├── <span class="hljs-keyword">checkpoint</span>-postgres/# PostgreSQL 实现<br>├── <span class="hljs-keyword">checkpoint</span>-sqlite/  # SQLite 实现<br>├── prebuilt/           # 预置组件（ReAct Agent、ToolNode）<br>├── sdk-py/             # Python SDK（访问 LangGraph <span class="hljs-keyword">Server</span>）<br>├── sdk-js/             # JS/TS SDK<br>└── cli/                # 命令行工具<br></code></pre></td></tr></table></figure>
+
+<p>核心依赖：<code>langchain-core&gt;=1.4.0</code>, <code>langgraph-checkpoint&gt;=4.1.0</code>, <code>xxhash&gt;=3.5.0</code>, <code>pydantic&gt;=2.7.4</code></p>
+<h3 id="分层架构"><a href="#分层架构" class="headerlink" title="分层架构"></a>分层架构</h3><figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs gradle">┌─────────────────────────────────────────────┐<br>│  用户 API 层                                 │<br>│  StateGraph / entrypoint+<span class="hljs-keyword">task</span> (函数式API)     │<br>├─────────────────────────────────────────────┤<br>│  图编译层                                     │<br>│  StateGraph.<span class="hljs-keyword">compile</span>() → CompiledStateGraph   │<br>│  (CompiledStateGraph <span class="hljs-keyword">extends</span> Pregel)         │<br>├─────────────────────────────────────────────┤<br>│  Pregel 执行引擎                              │<br>│  PregelLoop.tick() → PregelRunner → commit() │<br>├─────────────────────────────────────────────┤<br>│  Channel 通信层                              │<br>│  LastValue <span class="hljs-regexp">/ BinaryOperatorAggregate /</span> ...   │<br>├─────────────────────────────────────────────┤<br>│  持久化层                                    │<br>│  BaseCheckpointSaver + Serde (v4格式)        │<br>└─────────────────────────────────────────────┘<br></code></pre></td></tr></table></figure>
+
+<h2 id="二、核心设计详解"><a href="#二、核心设计详解" class="headerlink" title="二、核心设计详解"></a>二、核心设计详解</h2><h3 id="1-Pregel-执行引擎-—-tick-after-tick-循环"><a href="#1-Pregel-执行引擎-—-tick-after-tick-循环" class="headerlink" title="1. Pregel 执行引擎 — tick&#x2F;after_tick 循环"></a>1. Pregel 执行引擎 — tick&#x2F;after_tick 循环</h3><p>源码位置：<code>pregel/_loop.py</code></p>
+<p>LangGraph 的执行引擎直接借鉴了 Google 的 <strong>Pregel</strong> 论文（BSP - Bulk Synchronous Parallel）。执行按**超步(superstep)**推进：</p>
+<ul>
+<li>每个超步中，所有就绪节点并行执行</li>
+<li>节点通过 Channel 写入更新</li>
+<li>超步结束时，Channel 聚合所有写入</li>
+<li>下一个超步根据新状态决定哪些节点激活</li>
+</ul>
+<p>这与传统 DAG 框架（只支持拓扑排序执行）本质不同——它支持<strong>循环</strong>、<strong>条件分支</strong>和<strong>动态路由</strong>。</p>
+<p><strong>tick()</strong> 方法（核心超步）：</p>
+<ol>
+<li>检查 step &gt; stop limit → 返回 False（默认 recursion limit &#x3D; <strong>10007</strong>，而非文档中的25）</li>
+<li>调用 <code>prepare_next_tasks()</code> 确定就绪任务</li>
+<li>无任务 → status&#x3D;”done”，返回 False</li>
+<li>检查 <code>interrupt_before</code> → 可能抛出 <code>GraphInterrupt</code></li>
+<li>返回 True（继续执行）</li>
+</ol>
+<p><strong>after_tick()</strong> 方法：</p>
+<ol>
+<li>收集所有任务写入</li>
+<li><code>apply_writes()</code> 更新 Channel 并触发 checkpoint</li>
+<li>发射 “values” 流式输出</li>
+<li>捕获 DeltaChannel 的 exit-mode 写入</li>
+<li><code>_put_checkpoint({&quot;source&quot;: &quot;loop&quot;})</code> 持久化</li>
+<li>检查 <code>interrupt_after</code> → 可能抛出 <code>GraphInterrupt</code></li>
+</ol>
+<p><strong>状态生命周期</strong>：<code>input</code> → <code>pending</code> → (tick循环) → <code>done</code> | <code>interrupt_before</code> | <code>interrupt_after</code> | <code>out_of_steps</code> | <code>draining</code></p>
+<h3 id="2-Channel-类型系统"><a href="#2-Channel-类型系统" class="headerlink" title="2. Channel 类型系统"></a>2. Channel 类型系统</h3><p>Channel 是节点间通信的中间层，每个状态字段对应一个 Channel。前次分析遗漏了部分类型，完整列表如下：</p>
+<table>
+<thead>
+<tr>
+<th>Channel 类型</th>
+<th>语义</th>
+<th>关键特性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>LastValue</code></td>
+<td>保留最后值</td>
+<td>每步仅允许一次写入</td>
+</tr>
+<tr>
+<td><code>LastValueAfterFinish</code></td>
+<td>finish后可用</td>
+<td>一次消费后清空</td>
+</tr>
+<tr>
+<td><code>BinaryOperatorAggregate</code></td>
+<td>Reducer聚合</td>
+<td>支持Overwrite绕过reducer</td>
+</tr>
+<tr>
+<td><code>DeltaChannel</code></td>
+<td>增量快照</td>
+<td><strong>BETA</strong>，减少序列化开销</td>
+</tr>
+<tr>
+<td><code>Topic</code></td>
+<td>发布&#x2F;订阅</td>
+<td>可选accumulate跨步累积</td>
+</tr>
+<tr>
+<td><code>EphemeralValue</code></td>
+<td>单步生命周期</td>
+<td>guard&#x3D;True强制单写入</td>
+</tr>
+<tr>
+<td><code>UntrackedValue</code></td>
+<td>不参与checkpoint</td>
+<td>永远返回MISSING</td>
+</tr>
+<tr>
+<td><code>AnyValue</code></td>
+<td>多写入取最后</td>
+<td>类似LastValue但允许多写入</td>
+</tr>
+<tr>
+<td><code>NamedBarrierValue</code></td>
+<td>等待所有命名值</td>
+<td>fan-in同步屏障</td>
+</tr>
+<tr>
+<td><code>NamedBarrierValueAfterFinish</code></td>
+<td>barrier+finish</td>
+<td>先barrier再消费</td>
+</tr>
+</tbody></table>
+<p><strong>关键接口</strong>（<code>BaseChannel</code>）：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs python">update(values: <span class="hljs-type">Sequence</span>[Update]) -&gt; <span class="hljs-built_in">bool</span>    <span class="hljs-comment"># 写入</span><br>checkpoint() -&gt; Checkpoint                   <span class="hljs-comment"># 序列化</span><br>from_checkpoint(checkpoint) -&gt; Self          <span class="hljs-comment"># 反序列化恢复</span><br>consume() -&gt; <span class="hljs-built_in">bool</span>                            <span class="hljs-comment"># 消费（Topic等）</span><br>finish() -&gt; <span class="hljs-built_in">bool</span>                             <span class="hljs-comment"># 终结（barrier等）</span><br></code></pre></td></tr></table></figure>
+
+<p>这种设计的精妙之处：<strong>将状态管理从节点逻辑中完全解耦</strong>。节点只需 <code>State -&gt; Partial&lt;State&gt;</code>，不需要关心并发写入的合并策略。</p>
+<h3 id="3-Checkpoint-持久化（Durable-Execution）"><a href="#3-Checkpoint-持久化（Durable-Execution）" class="headerlink" title="3. Checkpoint 持久化（Durable Execution）"></a>3. Checkpoint 持久化（Durable Execution）</h3><p>每个超步结束时，引擎将完整的 Channel 状态 + 待处理写入序列化为 Checkpoint。v4 格式结构如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">Checkpoint</span>(<span class="hljs-title class_ inherited__">TypedDict</span>):<br>    v: <span class="hljs-built_in">int</span>                      <span class="hljs-comment"># 版本号 = 4</span><br>    <span class="hljs-built_in">id</span>: <span class="hljs-built_in">str</span>                     <span class="hljs-comment"># UUID6（时间有序）</span><br>    ts: <span class="hljs-built_in">str</span>                     <span class="hljs-comment"># ISO 8601时间戳</span><br>    channel_values: <span class="hljs-built_in">dict</span>        <span class="hljs-comment"># Channel序列化快照</span><br>    channel_versions: <span class="hljs-built_in">dict</span>      <span class="hljs-comment"># 每个Channel的版本号</span><br>    versions_seen: <span class="hljs-built_in">dict</span>         <span class="hljs-comment"># 节点→Channel→最后可见版本</span><br>    updated_channels: <span class="hljs-built_in">list</span>      <span class="hljs-comment"># 本步更新的Channel</span><br></code></pre></td></tr></table></figure>
+
+<p>这保证了：</p>
+<ul>
+<li><strong>故障恢复</strong>：进程崩溃后从最近的 Checkpoint 恢复</li>
+<li><strong>Human-in-the-loop</strong>：<code>interrupt()</code> 暂停执行，持久化状态，等待人类输入后精确恢复</li>
+<li><strong>时间旅行</strong>：可以回溯到任意历史 Checkpoint 并重新执行</li>
+<li><strong>分支执行</strong>：从同一 Checkpoint fork 出多条执行路径</li>
+</ul>
+<p><strong>Durability 模式</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>行为</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>sync</code></td>
+<td>同步持久化，下一步开始前确保写入</td>
+<td>强一致性要求</td>
+</tr>
+<tr>
+<td><code>async</code></td>
+<td>异步持久化，与下一步执行并行</td>
+<td>性能优先</td>
+</tr>
+<tr>
+<td><code>exit</code></td>
+<td>仅在图退出时持久化</td>
+<td>短任务，大幅减少I&#x2F;O</td>
+</tr>
+</tbody></table>
+<p><strong>DeltaChannel 增量序列化细节</strong>：</p>
+<ul>
+<li><code>checkpoint()</code> 始终返回 <code>MISSING</code>（不存储值）</li>
+<li>实际快照决策在 <code>create_checkpoint()</code> 中：当 <code>updates &gt;= snapshot_frequency</code>（默认1000）或 <code>supersteps &gt;= 5000</code> 时做全量快照</li>
+<li>恢复时调用 <code>get_delta_channel_history()</code> 沿父链回溯，收集历史写入并 replay</li>
+</ul>
+<h3 id="4-interrupt-实现机制"><a href="#4-interrupt-实现机制" class="headerlink" title="4. interrupt() 实现机制"></a>4. interrupt() 实现机制</h3><p>源码位置：<code>types.py:811-934</code></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># 节点内暂停，等待人类输入</span><br>human_input = interrupt(&#123;<span class="hljs-string">&quot;question&quot;</span>: <span class="hljs-string">&quot;请确认是否继续？&quot;</span>&#125;)<br><br><span class="hljs-comment"># 客户端恢复时发送 Command</span><br>graph.invoke(Command(resume=<span class="hljs-string">&quot;是&quot;</span>))<br><br><span class="hljs-comment"># Command 还支持动态路由</span><br><span class="hljs-keyword">return</span> Command(goto=<span class="hljs-string">&quot;next_node&quot;</span>, update=&#123;<span class="hljs-string">&quot;key&quot;</span>: <span class="hljs-string">&quot;value&quot;</span>&#125;)<br></code></pre></td></tr></table></figure>
+
+<p><strong>interrupt(value) 工作流</strong>：</p>
+<ol>
+<li>从 config 获取 <code>PregelScratchpad</code></li>
+<li><code>scratchpad.interrupt_counter()</code> 递增索引</li>
+<li>如果索引 &lt; len(scratchpad.resume) → 返回已缓存的 resume 值</li>
+<li>检查 <code>scratchpad.get_null_resume(True)</code></li>
+<li>无 resume 值 → raise <code>GraphInterrupt(Interrupt(value, id))</code></li>
+</ol>
+<p><strong>重要细节</strong>：</p>
+<ul>
+<li><code>GraphInterrupt</code> 继承自 <code>GraphBubbleUp</code>（继承自 <code>Exception</code>），但被 <code>_suppress_interrupt()</code> 在根层捕获并抑制</li>
+<li>恢复时<strong>整个节点从头重新执行</strong>，通过 scratchpad 的 interrupt_counter 按调用顺序匹配 resume 值</li>
+<li><code>PregelScratchpad</code> 是一个 frozen dataclass，跟踪：step, stop, call_counter, interrupt_counter, resume列表, subgraph_counter</li>
+</ul>
+<p>interrupt 的实现基于 Python 异常机制配合 Checkpoint，实现了<strong>可恢复的协程语义</strong>——这在其他框架中极为罕见。</p>
+<h3 id="5-Command-机制"><a href="#5-Command-机制" class="headerlink" title="5. Command 机制"></a>5. Command 机制</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-meta">@dataclass(<span class="hljs-params">kw_only=<span class="hljs-literal">True</span>, slots=<span class="hljs-literal">True</span>, frozen=<span class="hljs-literal">True</span></span>)</span><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">Command</span>(<span class="hljs-type">Generic</span>[N]):<br>    graph: <span class="hljs-built_in">str</span> | <span class="hljs-literal">None</span> = <span class="hljs-literal">None</span>     <span class="hljs-comment"># None=当前图, &quot;__parent__&quot;=父图</span><br>    update: <span class="hljs-type">Any</span> | <span class="hljs-literal">None</span> = <span class="hljs-literal">None</span>    <span class="hljs-comment"># 状态更新</span><br>    resume: <span class="hljs-built_in">dict</span> | <span class="hljs-type">Any</span> | <span class="hljs-literal">None</span>    <span class="hljs-comment"># interrupt恢复值</span><br>    goto: Send | <span class="hljs-type">Sequence</span> | N    <span class="hljs-comment"># 动态路由目标</span><br></code></pre></td></tr></table></figure>
+
+<p><code>map_command()</code> 将 Command 转换为写入：</p>
+<ul>
+<li><code>goto</code>: Send对象 → <code>(NULL_TASK_ID, TASKS, send)</code>，字符串 → <code>(NULL_TASK_ID, &quot;branch:to:{node}&quot;, START)</code></li>
+<li><code>resume</code>: <code>(NULL_TASK_ID, RESUME, resume_value)</code></li>
+<li><code>update</code>: <code>(NULL_TASK_ID, k, v)</code> 每个键值对</li>
+</ul>
+<p><strong>Command.PARENT 在根图层级会抛出 InvalidUpdateError</strong>，仅子图可用。</p>
+<h3 id="6-确定性-Task-ID-生成"><a href="#6-确定性-Task-ID-生成" class="headerlink" title="6. 确定性 Task ID 生成"></a>6. 确定性 Task ID 生成</h3><p>源码位置：<code>pregel/_algo.py:1394-1408</code></p>
+<p><strong>PULL 任务</strong>（普通节点）：</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs ini"><span class="hljs-attr">task_id</span> = hash(checkpoint_id_bytes, checkpoint_ns, step, node_name, PULL, *sorted(triggers))<br></code></pre></td></tr></table></figure>
+
+<p><strong>PUSH 任务</strong>（Send驱动）：</p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs stylus">task_id = <span class="hljs-built_in">hash</span>(checkpoint_id_bytes, checkpoint_ns, step, packet<span class="hljs-selector-class">.node</span>, PUSH, <span class="hljs-built_in">str</span>(idx))<br></code></pre></td></tr></table></figure>
+
+<p><strong>哈希函数</strong>：</p>
+<ul>
+<li>v &gt; 1：<code>xxh3_128_hexdigest</code>（快速非加密哈希）</li>
+<li>v ≤ 1：SHA-1（向后兼容）</li>
+</ul>
+<p>确定性 ID 确保了幂等性和跨执行缓存复用——给定相同的 Checkpoint，重放总是产生相同结果。</p>
+<h3 id="7-子图组合机制"><a href="#7-子图组合机制" class="headerlink" title="7. 子图组合机制"></a>7. 子图组合机制</h3><ul>
+<li>通过 <code>find_subgraph_pregel()</code> 自动发现 Runnable 树中的 PregelProtocol 实例</li>
+<li>Checkpoint 命名空间：<code>NS_SEP=&quot;|&quot;</code> 分隔层级，<code>NS_END=&quot;:&quot;</code> 分隔命名空间与任务ID</li>
+<li>父图通过 <code>CONFIG_KEY_CHECKPOINT_MAP</code> 传递 checkpoint_id 映射</li>
+<li>每个子图有独立的 Checkpoint namespace，状态隔离但可通过 Channel 通信</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># 子图作为节点嵌入</span><br>parent_graph.add_node(<span class="hljs-string">&quot;research&quot;</span>, research_subgraph)<br></code></pre></td></tr></table></figure>
+
+<p>这使得复杂工作流可以模块化开发和测试。</p>
+<h3 id="8-流式输出模式"><a href="#8-流式输出模式" class="headerlink" title="8. 流式输出模式"></a>8. 流式输出模式</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs python">StreamMode = <span class="hljs-type">Literal</span>[<span class="hljs-string">&quot;values&quot;</span>, <span class="hljs-string">&quot;updates&quot;</span>, <span class="hljs-string">&quot;checkpoints&quot;</span>, <span class="hljs-string">&quot;tasks&quot;</span>, <span class="hljs-string">&quot;debug&quot;</span>, <span class="hljs-string">&quot;messages&quot;</span>, <span class="hljs-string">&quot;custom&quot;</span>]<br></code></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>语义</th>
+<th>典型用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>values</code></td>
+<td>每步完整状态</td>
+<td>全局状态监控</td>
+</tr>
+<tr>
+<td><code>updates</code></td>
+<td>增量更新</td>
+<td>UI 局部刷新</td>
+</tr>
+<tr>
+<td><code>messages</code></td>
+<td>LLM token 级流式</td>
+<td>实时打字效果</td>
+</tr>
+<tr>
+<td><code>custom</code></td>
+<td>自定义事件</td>
+<td>业务逻辑通知</td>
+</tr>
+<tr>
+<td><code>debug</code></td>
+<td>内部执行跟踪</td>
+<td>调试与排错</td>
+</tr>
+<tr>
+<td><code>checkpoints</code></td>
+<td>Checkpoint 事件</td>
+<td>持久化监控</td>
+</tr>
+<tr>
+<td><code>tasks</code></td>
+<td>任务生命周期</td>
+<td>并行任务跟踪</td>
+</tr>
+</tbody></table>
+<p>SDK 层额外支持 <code>&quot;messages-tuple&quot;</code> 模式。通过 <code>StreamTransformer</code> 体系（<code>ValuesTransformer</code>, <code>UpdatesTransformer</code>, <code>CustomTransformer</code>, <code>MessagesTransformer</code>, <code>LifecycleTransformer</code>, <code>SubgraphTransformer</code>）处理协议事件。</p>
+<h2 id="三、与主流-Agent-框架对比"><a href="#三、与主流-Agent-框架对比" class="headerlink" title="三、与主流 Agent 框架对比"></a>三、与主流 Agent 框架对比</h2><h3 id="对比矩阵"><a href="#对比矩阵" class="headerlink" title="对比矩阵"></a>对比矩阵</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>LangGraph</th>
+<th>CrewAI</th>
+<th>AutoGen</th>
+<th>Dify</th>
+<th>Coze</th>
+<th>Semantic Kernel</th>
+<th>Haystack</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>抽象层级</strong></td>
+<td>低层（图原语）</td>
+<td>高层（角色&#x2F;任务）</td>
+<td>中层（对话协议）</td>
+<td>无代码&#x2F;低代码</td>
+<td>无代码</td>
+<td>中层（Plugin+Planner）</td>
+<td>中层（Pipeline+Component）</td>
+</tr>
+<tr>
+<td><strong>核心抽象</strong></td>
+<td>StateGraph, Node, Edge, Channel</td>
+<td>Agent, Task, Crew, Flow</td>
+<td>Agent, Team, GroupChat</td>
+<td>Workflow Node, Edge</td>
+<td>Bot, Workflow, Plugin</td>
+<td>Kernel, Plugin, Process</td>
+<td>Pipeline, Component, Agent</td>
+</tr>
+<tr>
+<td><strong>状态管理</strong></td>
+<td>Channel+Reducer（显式）</td>
+<td>隐式共享</td>
+<td>对话历史（隐式）</td>
+<td>全局变量+节点输出</td>
+<td>变量绑定+上下文</td>
+<td>Kernel内存</td>
+<td>Pipeline连接</td>
+</tr>
+<tr>
+<td><strong>持久化</strong></td>
+<td><strong>一等公民</strong></td>
+<td>无内建</td>
+<td>无内建</td>
+<td>数据库存储</td>
+<td>平台托管</td>
+<td>Process Framework新增</td>
+<td>无内建</td>
+</tr>
+<tr>
+<td><strong>循环支持</strong></td>
+<td><strong>原生</strong>（Pregel）</td>
+<td>有限（Flow）</td>
+<td>对话循环</td>
+<td><strong>不支持</strong>（纯DAG）</td>
+<td><strong>不支持</strong>（纯DAG）</td>
+<td>Process Framework新增</td>
+<td><strong>不支持</strong>（纯DAG）</td>
+</tr>
+<tr>
+<td><strong>Human-in-the-loop</strong></td>
+<td><strong>interrupt+Command</strong></td>
+<td>human_input标志</td>
+<td>HumanProxyAgent</td>
+<td>HumanFeedback节点</td>
+<td>无</td>
+<td>InputAction</td>
+<td>无内建</td>
+</tr>
+<tr>
+<td><strong>流式输出</strong></td>
+<td><strong>7种模式</strong></td>
+<td>无</td>
+<td>有限</td>
+<td>有限</td>
+<td>SSE</td>
+<td>有限</td>
+<td>有限</td>
+</tr>
+<tr>
+<td><strong>子图&#x2F;组合</strong></td>
+<td><strong>原生支持</strong></td>
+<td>无</td>
+<td>无</td>
+<td>子流程（有限）</td>
+<td>无</td>
+<td>无</td>
+<td>Pipeline嵌套</td>
+</tr>
+<tr>
+<td><strong>部署模式</strong></td>
+<td>库+Server</td>
+<td>库</td>
+<td>库</td>
+<td>SaaS</td>
+<td>SaaS</td>
+<td>库+Azure</td>
+<td>库</td>
+</tr>
+<tr>
+<td><strong>语言支持</strong></td>
+<td>Python+JS</td>
+<td>Python</td>
+<td>Python</td>
+<td>-</td>
+<td>-</td>
+<td>C#+Python</td>
+<td>Python</td>
+</tr>
+</tbody></table>
+<h3 id="LangGraph-的真正护城河"><a href="#LangGraph-的真正护城河" class="headerlink" title="LangGraph 的真正护城河"></a>LangGraph 的真正护城河</h3><p><strong>1. 每超步 Checkpoint + interrupt + 时间旅行三位一体</strong></p>
+<p>没有任何其他主流 Agent 框架同时具备这三个能力。CrewAI 和 AutoGen 没有内建持久化；Dify 和 Coze 有平台级存储但缺乏细粒度的 per-step checkpoint；Semantic Kernel 的 Process Framework 开始引入状态持久化，但远未达到 LangGraph 的完整性。</p>
+<p><strong>2. Channel&#x2F;Reducer 状态模型——将状态管理从节点逻辑中完全解耦</strong></p>
+<p>这是 LangGraph 最被低估的设计。其他框架要么让状态在角色对话中隐式传递（CrewAI），要么依赖全局变量（Dify）。LangGraph 的 Channel 系统让开发者精确控制：信息流向、并发写入合并策略、字段生命周期。</p>
+<p><strong>3. Pregel&#x2F;BSP 执行模型的独特性</strong></p>
+<p>截至2025年初，<strong>没有其他主流 Agent 框架采用 Pregel&#x2F;BSP 模型</strong>。AutoGen 走了事件驱动路线，SK 走了 Planner 路线，其余都是 DAG 或对话循环。Pregel 模型天然支持并行、循环、动态路由——这些在 Agent 场景中极为常见的需求。</p>
+<h3 id="竞争对手已经追上的领域"><a href="#竞争对手已经追上的领域" class="headerlink" title="竞争对手已经追上的领域"></a>竞争对手已经追上的领域</h3><ul>
+<li><strong>开发者体验</strong>：Dify&#x2F;Coze 的可视化编辑器对非开发者更友好</li>
+<li><strong>企业基础设施</strong>：SK 深度集成 Azure，Coze 背靠字节</li>
+<li><strong>RAG 原生支持</strong>：Haystack 的 Pipeline+Component 天然适合 RAG 管线</li>
+<li><strong>多语言 SDK</strong>：SK 的 C# + Python 双语言支持</li>
+</ul>
+<h2 id="四、Durable-Execution-竞争格局"><a href="#四、Durable-Execution-竞争格局" class="headerlink" title="四、Durable Execution 竞争格局"></a>四、Durable Execution 竞争格局</h2><p>在持久化执行领域，LangGraph 面临来自通用平台的竞争：</p>
+<table>
+<thead>
+<tr>
+<th>框架&#x2F;平台</th>
+<th>类型</th>
+<th>Durable Execution 方式</th>
+<th>与 LangGraph 关系</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Temporal + AI</strong></td>
+<td>通用编排</td>
+<td>Event Sourcing + Workflow Replay</td>
+<td>可组合——有人用 Temporal 编排 LangGraph</td>
+</tr>
+<tr>
+<td><strong>Inngest</strong></td>
+<td>事件驱动平台</td>
+<td>Event-driven durable functions</td>
+<td>面向 Serverless，与 LangGraph 互补</td>
+</tr>
+<tr>
+<td><strong>Restate</strong></td>
+<td>Durable Execution 平台</td>
+<td>Journal-based replay + suspend&#x2F;resume</td>
+<td><strong>最接近 LangGraph 的 interrupt 模式</strong></td>
+</tr>
+<tr>
+<td><strong>DBOS</strong></td>
+<td>数据库驱动</td>
+<td>Postgres-backed durable workflows</td>
+<td>面向数据密集型，非 Agent 专用</td>
+</tr>
+<tr>
+<td><strong>Fixpoint</strong></td>
+<td>Agent Durable Execution</td>
+<td>Checkpoint + replay</td>
+<td>2024-2025 新兴，直接对标 LangGraph</td>
+</tr>
+</tbody></table>
+<p><strong>Restate 是最值得关注的对手</strong>：</p>
+<ul>
+<li>Journal-based execution：每个操作记录到 journal，崩溃后通过 journal replay 恢复</li>
+<li>Suspend&#x2F;resume：类似 LangGraph 的 interrupt，支持 <code>ctx.run()</code> + <code>ctx.awakeable()</code></li>
+<li>确定性重放：journal 保证相同输入产生相同结果</li>
+</ul>
+<p>但差异在于：Restate 是通用 Durable Execution 平台，不是 Agent 原生；缺少 Channel&#x2F;Reducer 等高级状态抽象；不直接支持 Python LLM 生态。</p>
+<h2 id="五、总结"><a href="#五、总结" class="headerlink" title="五、总结"></a>五、总结</h2><p>LangGraph 的核心竞争力在于<strong>将分布式系统的成熟理念（Pregel、BSP、Checkpoint）系统性地引入 Agent 编排领域</strong>，而非简单地串联 LLM 调用。</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>LangGraph 优势程度</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Durable Execution</td>
+<td><strong>极强</strong></td>
+<td>无直接竞争者</td>
+</tr>
+<tr>
+<td>循环&#x2F;图结构</td>
+<td><strong>强</strong></td>
+<td>唯一原生支持 cycle + 状态的 Agent 框架</td>
+</tr>
+<tr>
+<td>状态管理精度</td>
+<td><strong>强</strong></td>
+<td>Channel&#x2F;Reducer 独一无二</td>
+</tr>
+<tr>
+<td>开发体验</td>
+<td><strong>中等</strong></td>
+<td>高层 API 在追赶，仍比 CrewAI 陡峭</td>
+</tr>
+<tr>
+<td>可视化&#x2F;低代码</td>
+<td><strong>弱</strong></td>
+<td>Studio 不如 Dify&#x2F;Coze</td>
+</tr>
+<tr>
+<td>企业基础设施</td>
+<td><strong>中等</strong></td>
+<td>LangGraph Cloud 在成长，但不如 Azure 集成</td>
+</tr>
+<tr>
+<td>RAG&#x2F;知识库</td>
+<td><strong>弱</strong></td>
+<td>需要外部组件</td>
+</tr>
+<tr>
+<td>社区&#x2F;生态</td>
+<td><strong>强</strong></td>
+<td>LangChain 生态效应</td>
+</tr>
+</tbody></table>
+<p><strong>LangGraph 的核心竞争力 &#x3D; Pregel 图计算 + Channel 状态管理 + Checkpoint 持久化的三位一体。</strong> 这不是单一功能可以被复制，而是架构层面的组合创新。竞争对手可以追赶单个维度（循环、持久化、状态），但很难同时达到三者的深度整合。</p>
+<p><strong>最大风险</strong>：如果 Restate&#x2F;Temporal 等通用 Durable Execution 平台进入 Agent 领域，加上一个更友好高层 API 的框架，LangGraph 的中间层定位可能受到挤压——上面被 Dify&#x2F;Coze 的低代码吸引走业务用户，下面被 Temporal&#x2F;Restate 的基础设施吸引走需要强持久化保证的工程团队。</p>
+<p>最适合场景：需要<strong>长时间运行、有人类参与、状态复杂</strong>的 Agent 系统（如客服工单处理、多步骤研究助手、审批流程等）。</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8B%A5%E6%8A%B1Agent/" class="category-chain-item">拥抱Agent</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/AI-Agent/" class="print-no-link">#AI Agent</a>
+      
+        <a href="/tags/%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE/" class="print-no-link">#开源项目</a>
+      
+        <a href="/tags/%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1/" class="print-no-link">#架构设计</a>
+      
+        <a href="/tags/Python/" class="print-no-link">#Python</a>
+      
+        <a href="/tags/LangGraph/" class="print-no-link">#LangGraph</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>LangGraph 源码解析：Pregel 驱动的 Agent 编排架构与竞品深度对比</div>
+      <div>https://xiaopengqiu.github.io/2026/06/langgraph-architecture-deep-dive/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>xiaopengqiu</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年6月9日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/06/langgraph-defects-and-optimization/" title="LangGraph 项目缺陷分析与未来优化方向">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">LangGraph 项目缺陷分析与未来优化方向</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/05/crewai-architecture-deep-dive/" title="crewAI 源码解析：多 Agent 智能化的架构设计">
+                        <span class="hidden-mobile">crewAI 源码解析：多 Agent 智能化的架构设计</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.5.1/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"qyPrAYIAey77o4bjcc5pMipZ-gzGzoHsz","appKey":"z6pYYg24nUCBJSA52IXmNkMe","path":"window.location.pathname","placeholder":"说点什么","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+
+</div>
+
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

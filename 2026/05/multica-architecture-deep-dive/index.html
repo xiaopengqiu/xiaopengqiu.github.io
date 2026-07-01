@@ -1,0 +1,956 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="xiaopengqiu">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="项目简介Multica 是一个开源的 AI Agent 管理平台，核心理念是 “Your next 10 hires won’t be human”——让编码 Agent 成为团队中真正的队友。你可以像给同事分配任务一样给 Agent 分配 Issue，Agent 会自主认领、执行、报告阻塞项并更新状态。 名字源自 Multiplexed Information and Computing Age">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Multica 源码解析：让 AI Agent 成为真正队友的架构设计">
+<meta property="og:url" content="https://xiaopengqiu.github.io/2026/05/multica-architecture-deep-dive/index.html">
+<meta property="og:site_name" content="风雪归程">
+<meta property="og:description" content="项目简介Multica 是一个开源的 AI Agent 管理平台，核心理念是 “Your next 10 hires won’t be human”——让编码 Agent 成为团队中真正的队友。你可以像给同事分配任务一样给 Agent 分配 Issue，Agent 会自主认领、执行、报告阻塞项并更新状态。 名字源自 Multiplexed Information and Computing Age">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-05-12T12:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-01T09:13:20.106Z">
+<meta property="article:author" content="xiaopengqiu">
+<meta property="article:tag" content="AI Agent">
+<meta property="article:tag" content="Go">
+<meta property="article:tag" content="Next.js">
+<meta property="article:tag" content="开源项目">
+<meta property="article:tag" content="架构设计">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Multica 源码解析：让 AI Agent 成为真正队友的架构设计 - 风雪归程</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"xiaopengqiu.github.io","root":"/","version":"1.9.8","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":"qyPrAYIAey77o4bjcc5pMipZ-gzGzoHsz","app_key":"z6pYYg24nUCBJSA52IXmNkMe","server_url":null,"path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>风雪归程</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Multica 源码解析：让 AI Agent 成为真正队友的架构设计"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-05-12 20:00" pubdate>
+          2026年5月12日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          2.1k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          18 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Multica 源码解析：让 AI Agent 成为真正队友的架构设计</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="项目简介"><a href="#项目简介" class="headerlink" title="项目简介"></a>项目简介</h2><p>Multica 是一个开源的 AI Agent 管理平台，核心理念是 <strong>“Your next 10 hires won’t be human”</strong>——让编码 Agent 成为团队中真正的队友。你可以像给同事分配任务一样给 Agent 分配 Issue，Agent 会自主认领、执行、报告阻塞项并更新状态。</p>
+<p>名字源自 <strong>Mul</strong>tiplexed <strong>I</strong>nformation and <strong>C</strong>omputing <strong>A</strong>gent，致敬 1960 年代分时操作系统 Multics——当年 Multics 让多个用户共享一台机器，而 Multica 让人类和 Agent 共享同一个工作空间。</p>
+<span id="more"></span>
+
+<h2 id="技术栈全景"><a href="#技术栈全景" class="headerlink" title="技术栈全景"></a>技术栈全景</h2><table>
+<thead>
+<tr>
+<th>层级</th>
+<th>技术选型</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>前端</td>
+<td>Next.js 16 (App Router) + TypeScript + Tailwind CSS + shadcn&#x2F;ui</td>
+</tr>
+<tr>
+<td>后端</td>
+<td>Go 1.26 + Chi 路由器 + gorilla&#x2F;websocket</td>
+</tr>
+<tr>
+<td>数据库</td>
+<td>PostgreSQL 17 + pgvector</td>
+</tr>
+<tr>
+<td>缓存&#x2F;消息</td>
+<td>Redis (多节点实时事件中继)</td>
+</tr>
+<tr>
+<td>对象存储</td>
+<td>S3 兼容 &#x2F; 本地文件系统</td>
+</tr>
+<tr>
+<td>实时通信</td>
+<td>WebSocket (作用域房间 + Redis Stream 分片)</td>
+</tr>
+<tr>
+<td>认证</td>
+<td>JWT + PAT (Personal Access Token) + Daemon Token</td>
+</tr>
+<tr>
+<td>Monorepo</td>
+<td>Turborepo + pnpm workspace</td>
+</tr>
+<tr>
+<td>Agent 支持</td>
+<td>Claude Code &#x2F; Codex &#x2F; GitHub Copilot CLI &#x2F; OpenClaw &#x2F; OpenCode &#x2F; Hermes &#x2F; Gemini &#x2F; Pi &#x2F; Cursor Agent &#x2F; Kimi &#x2F; Kiro CLI</td>
+</tr>
+</tbody></table>
+<p>整体架构图：</p>
+<figure class="highlight mipsasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs mipsasm">┌──────────────┐     ┌──────────────┐     ┌──────────────────┐<br>│   Next.<span class="hljs-keyword">js </span>   │────&gt;│  Go <span class="hljs-keyword">Backend </span> │────&gt;│   PostgreSQL     │<br>│   Frontend   │&lt;────│  (Chi + WS)  │&lt;────│   (pgvector)     │<br>└──────────────┘     └──────┬───────┘     └──────────────────┘<br>                            │<br>                     ┌──────┴───────┐<br>                     │ Agent Daemon │  ← 运行在本机<br>                     └──────────────┘<br></code></pre></td></tr></table></figure>
+
+<h2 id="核心设计思想"><a href="#核心设计思想" class="headerlink" title="核心设计思想"></a>核心设计思想</h2><h3 id="1-Agent-是一等公民"><a href="#1-Agent-是一等公民" class="headerlink" title="1. Agent 是一等公民"></a>1. Agent 是一等公民</h3><p>这不是一个”后台跑脚本”的工具，Agent 在系统中拥有完整的身份：</p>
+<ul>
+<li><strong>Agent Profile</strong>：每个 Agent 有名字、头像、能力描述</li>
+<li><strong>Issue 分配</strong>：Assignee Picker 里 Agent 和人类并列</li>
+<li><strong>活动时间线</strong>：Agent 的操作记录与人类操作同流展示</li>
+<li><strong>主动沟通</strong>：Agent 能发评论、创建 Issue、报告阻塞</li>
+</ul>
+<p>这种设计将 Agent 从”工具”提升为”协作者”，改变了团队协作的心智模型。</p>
+<h3 id="2-事件驱动架构"><a href="#2-事件驱动架构" class="headerlink" title="2. 事件驱动架构"></a>2. 事件驱动架构</h3><p>系统内部采用事件总线驱动组件间通信：</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs nginx"><span class="hljs-attribute">HTTP</span> 请求 → Handler → Service → Event → Listener → WebSocket Hub → 客户端<br></code></pre></td></tr></table></figure>
+
+<p>好处是解耦——新增功能只需订阅相关事件，无需修改已有逻辑。事件同时触发实时推送，保证前端状态同步。</p>
+<h3 id="3-任务队列与租约机制"><a href="#3-任务队列与租约机制" class="headerlink" title="3. 任务队列与租约机制"></a>3. 任务队列与租约机制</h3><p>Agent 任务不是简单的”派发-执行”模型，而是基于数据库的任务队列 + 租约（Lease）机制：</p>
+<ol>
+<li>用户创建 Issue → 任务入队 (<code>agent_task_queue</code> 表)</li>
+<li>Daemon 通过 HTTP 轮询或 WebSocket 通知发现待执行任务</li>
+<li>Daemon Claim 任务 → 获得租约（带超时）</li>
+<li>执行过程中通过 WebSocket 流式推送进度</li>
+<li>完成&#x2F;失败 → 更新数据库 → 触发事件</li>
+</ol>
+<p>租约机制确保任务不会因为 Daemon 崩溃而永远悬挂——超时后其他 Daemon 可以重新认领。</p>
+<h3 id="4-可复用技能（Skills）"><a href="#4-可复用技能（Skills）" class="headerlink" title="4. 可复用技能（Skills）"></a>4. 可复用技能（Skills）</h3><p>每个解决方案可以被提取为 Skill，供整个团队复用。部署脚本、数据库迁移、代码审查模板——技能随时间复合增长，让团队的能力不随人员流动而流失。</p>
+<h2 id="后端架构深入"><a href="#后端架构深入" class="headerlink" title="后端架构深入"></a>后端架构深入</h2><h3 id="分层设计"><a href="#分层设计" class="headerlink" title="分层设计"></a>分层设计</h3><figure class="highlight pgsql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs pgsql">HTTP Handlers → Services → Data <span class="hljs-keyword">Access</span> → <span class="hljs-keyword">Database</span><br>                ↓<br>            Event Bus → WebSocket Hub<br>                ↓<br>            Redis <span class="hljs-keyword">Cache</span><br></code></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>Handler 层</strong>：请求验证、认证、参数解析，委托给 Service</li>
+<li><strong>Service 层</strong>：核心业务逻辑（任务调度、自动领航、邮件通知等）</li>
+<li><strong>实时层</strong>：WebSocket Hub 管理连接，Redis Relay 支持多节点部署</li>
+</ul>
+<h3 id="WebSocket-实时系统"><a href="#WebSocket-实时系统" class="headerlink" title="WebSocket 实时系统"></a>WebSocket 实时系统</h3><p>这是系统中最精巧的部分之一。</p>
+<p><strong>作用域房间（Scoped Rooms）</strong></p>
+<p>WebSocket 连接按 scope 分组：workspace、user、task、chat。客户端订阅特定 scope，Hub 只推送相关事件，避免消息风暴。</p>
+<p><strong>慢客户端驱逐</strong></p>
+<p>每个连接有写缓冲区，当客户端消费速度跟不上推送速度时，Hub 直接断开该连接，防止一个慢客户端拖垮整个节点。</p>
+<p><strong>消息去重</strong></p>
+<p>使用有界 LRU 缓存追踪已发送的事件 ID，防止重复推送。</p>
+<p><strong>Redis Relay 多节点扩展</strong></p>
+<p>单节点模式下，WebSocket Hub 纯内存运行。多节点模式下，事件通过 Redis Stream 分片中继：</p>
+<figure class="highlight crmsh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs crmsh"><span class="hljs-keyword">Node</span> <span class="hljs-title">A</span> 发生事件 → Redis Stream → <span class="hljs-keyword">Node</span> <span class="hljs-title">B</span>/C/D 的 Relay → 各节点本地 Hub → 客户端<br></code></pre></td></tr></table></figure>
+
+<p>支持三种模式：</p>
+<ul>
+<li><code>sharded</code>：不同流量类型使用不同 Redis 客户端，减少争用</li>
+<li><code>dual</code>：兼容模式</li>
+<li><code>legacy</code>：向后兼容</li>
+</ul>
+<h3 id="Daemon-通信"><a href="#Daemon-通信" class="headerlink" title="Daemon 通信"></a>Daemon 通信</h3><p>Daemon 是运行在本机的轻量进程，负责：</p>
+<ul>
+<li><strong>心跳保活</strong>：WebSocket 心跳 + HTTP 回退</li>
+<li><strong>CLI 自动发现</strong>：扫描 PATH 上的 <code>claude</code>、<code>codex</code>、<code>copilot</code> 等命令</li>
+<li><strong>任务认领</strong>：收到通知后通过 HTTP Claim 任务</li>
+<li><strong>进度流式推送</strong>：执行过程通过 WebSocket 实时上报</li>
+</ul>
+<p><strong>Runtime 状态计算</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>状态</th>
+<th>判定条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Online</td>
+<td>Runtime 可达</td>
+</tr>
+<tr>
+<td>Unstable</td>
+<td>Runtime 断连 &lt; 5 分钟</td>
+</tr>
+<tr>
+<td>Offline</td>
+<td>Runtime 长时间无响应</td>
+</tr>
+</tbody></table>
+<p>后台有 Runtime Sweeper 定期扫描，将失联的 Runtime 标记为离线。</p>
+<h3 id="Agent-抽象层"><a href="#Agent-抽象层" class="headerlink" title="Agent 抽象层"></a>Agent 抽象层</h3><p><code>pkg/agent/</code> 提供统一接口适配多种编码 Agent：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">type</span> Agent <span class="hljs-keyword">interface</span> &#123;<br>    Stream(ctx context.Context, messages []Message) &lt;-<span class="hljs-keyword">chan</span> Event<br>    <span class="hljs-comment">// 会话管理、Token 追踪等</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>每个 Agent 后端（Claude、Codex、Copilot 等）实现此接口，上层代码无需关心具体 Agent 类型。这样新增 Agent 支持只需添加一个实现，无需改动业务逻辑。</p>
+<h2 id="前端架构"><a href="#前端架构" class="headerlink" title="前端架构"></a>前端架构</h2><h3 id="Monorepo-结构"><a href="#Monorepo-结构" class="headerlink" title="Monorepo 结构"></a>Monorepo 结构</h3><figure class="highlight nix"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs nix">apps<span class="hljs-symbol">/</span><br>├── web<span class="hljs-symbol">/</span>          <span class="hljs-comment"># 主 Web 应用 (Next.js 16)</span><br>└── desktop<span class="hljs-symbol">/</span>      <span class="hljs-comment"># Electron 桌面端</span><br>packages<span class="hljs-symbol">/</span><br>├── core<span class="hljs-symbol">/</span>         <span class="hljs-comment"># 共享类型、API Client、工具函数</span><br>├── ui<span class="hljs-symbol">/</span>           <span class="hljs-comment"># shadcn/ui 组件库</span><br>└── views<span class="hljs-symbol">/</span>        <span class="hljs-comment"># 共享视图组件 (Board、List、Form)</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="关键技术选型"><a href="#关键技术选型" class="headerlink" title="关键技术选型"></a>关键技术选型</h3><ul>
+<li><strong>状态管理</strong>：Zustand (轻量全局状态) + TanStack React Query (服务端状态)</li>
+<li><strong>富文本编辑</strong>：Tiptap（支持 Markdown、代码高亮、@提及、表格）</li>
+<li><strong>拖拽排序</strong>：dnd-kit（Issue Board 拖拽）</li>
+<li><strong>图表</strong>：Recharts（分析仪表盘）</li>
+<li><strong>API 层</strong>：<code>packages/core</code> 中的统一 API Client，带认证和 Zod schema 验证</li>
+</ul>
+<h3 id="容错设计"><a href="#容错设计" class="headerlink" title="容错设计"></a>容错设计</h3><p>API 响应使用 Zod schema 验证，后端字段变更时前端优雅降级而非崩溃。这是实际项目中很有价值的实践——后端迭代不应导致前端白屏。</p>
+<h2 id="数据库设计"><a href="#数据库设计" class="headerlink" title="数据库设计"></a>数据库设计</h2><p>经过 80+ 次迁移，核心表结构包括：</p>
+<ul>
+<li><code>user</code> &#x2F; <code>workspace</code> &#x2F; <code>member</code>：用户与团队</li>
+<li><code>agent</code>：Agent 定义（名称、类型、Runtime 关联）</li>
+<li><code>issue</code> &#x2F; <code>comment</code>：Issue 追踪与评论</li>
+<li><code>agent_task_queue</code>：任务队列（带租约）</li>
+<li><code>runtime</code>：运行时实例</li>
+<li><code>skill</code>：可复用技能</li>
+<li><code>chat</code> &#x2F; <code>chat_message</code>：对话系统</li>
+<li><code>attachment</code>：文件附件</li>
+</ul>
+<p>关键设计决策：</p>
+<ul>
+<li><strong>UUID 主键</strong>：<code>gen_random_uuid()</code>，分布式友好</li>
+<li><strong>全文搜索索引</strong>：Issue 和 Comment 支持 <code>tsvector</code> 全文搜索</li>
+<li><strong>pgvector</strong>：为语义搜索预留向量索引</li>
+<li><strong>任务触发摘要缓存</strong>：创建任务时缓存触发上下文（评论内容等），避免后续查询回源表，且不受原始内容编辑&#x2F;删除影响</li>
+</ul>
+<h2 id="任务执行全流程"><a href="#任务执行全流程" class="headerlink" title="任务执行全流程"></a>任务执行全流程</h2><figure class="highlight nix"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs nix">用户创建 Issue<br>    ↓<br>HTTP API → TaskService → 任务入队 (PostgreSQL)<br>    ↓<br>Redis 缓存 <span class="hljs-string">&quot;有待执行任务&quot;</span> 信号<br>    ↓<br>Daemon 收到 WebSocket 通知 (或 HTTP 轮询发现)<br>    ↓<br>Daemon → HTTP Claim → 获得任务租约<br>    ↓<br>Daemon 调用 Agent CLI (claude <span class="hljs-symbol">/</span> codex <span class="hljs-symbol">/</span> ...)<br>    ↓<br>Agent 执行 → WebSocket 流式进度 → 前端实时更新<br>    ↓<br>完成<span class="hljs-operator">/</span>失败 → 更新数据库 → 事件总线 → 通知相关方<br></code></pre></td></tr></table></figure>
+
+<p><strong>Empty Claim Cache</strong> 是一个值得注意的优化：当没有待执行任务时，Redis 缓存该结果，避免 Daemon 频繁查数据库。任务入队时清除缓存。</p>
+<h2 id="部署与运维"><a href="#部署与运维" class="headerlink" title="部署与运维"></a>部署与运维</h2><h3 id="快速启动"><a href="#快速启动" class="headerlink" title="快速启动"></a>快速启动</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-comment"># Cloud 模式</span><br>multica setup<br><br><span class="hljs-comment"># Self-host 模式 (需要 Docker)</span><br>curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash -s -- --with-server<br>multica setup self-host<br></code></pre></td></tr></table></figure>
+
+<h3 id="开发模式"><a href="#开发模式" class="headerlink" title="开发模式"></a>开发模式</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">make dev  <span class="hljs-comment"># 自动检测环境、创建配置、安装依赖、初始化数据库、启动服务</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="环境变量"><a href="#环境变量" class="headerlink" title="环境变量"></a>环境变量</h3><table>
+<thead>
+<tr>
+<th>变量</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>DATABASE_URL</code></td>
+<td>PostgreSQL 连接串</td>
+</tr>
+<tr>
+<td><code>JWT_SECRET</code></td>
+<td>JWT 签名密钥</td>
+</tr>
+<tr>
+<td><code>REDIS_URL</code></td>
+<td>Redis 连接串（多节点必须）</td>
+</tr>
+<tr>
+<td><code>PORT</code></td>
+<td>API 端口 (默认 8080)</td>
+</tr>
+<tr>
+<td><code>RESEND_API_KEY</code></td>
+<td>邮件服务 API Key</td>
+</tr>
+<tr>
+<td><code>ALLOW_SIGNUP</code></td>
+<td>是否开放注册</td>
+</tr>
+</tbody></table>
+<h3 id="监控"><a href="#监控" class="headerlink" title="监控"></a>监控</h3><p>集成了 Prometheus 指标暴露，可以对接 Grafana 等监控体系。</p>
+<h2 id="值得借鉴的设计模式"><a href="#值得借鉴的设计模式" class="headerlink" title="值得借鉴的设计模式"></a>值得借鉴的设计模式</h2><h3 id="1-租约而非锁"><a href="#1-租约而非锁" class="headerlink" title="1. 租约而非锁"></a>1. 租约而非锁</h3><p>任务队列用 Lease 而非 Database Lock。Lease 有超时，即使 Daemon 崩溃也不会死锁。这是分布式系统中更健壮的并发控制方式。</p>
+<h3 id="2-缓存触发摘要"><a href="#2-缓存触发摘要" class="headerlink" title="2. 缓存触发摘要"></a>2. 缓存触发摘要</h3><p>任务创建时缓存触发上下文，后续查询无需回源。这在事件溯源系统中很实用——解耦了任务和触发源的生命周期。</p>
+<h3 id="3-慢客户端驱逐"><a href="#3-慢客户端驱逐" class="headerlink" title="3. 慢客户端驱逐"></a>3. 慢客户端驱逐</h3><p>WebSocket 服务端主动断开消费不过来的客户端，防止雪崩。这是生产级 WebSocket 服务的必备模式。</p>
+<h3 id="4-分片-Redis-Relay"><a href="#4-分片-Redis-Relay" class="headerlink" title="4. 分片 Redis Relay"></a>4. 分片 Redis Relay</h3><p>多节点 WebSocket 通过 Redis Stream 分片中继，比 Pub&#x2F;Sub 更可控，支持消费组、消息持久化和回溯。</p>
+<h3 id="5-Agent-工厂模式"><a href="#5-Agent-工厂模式" class="headerlink" title="5. Agent 工厂模式"></a>5. Agent 工厂模式</h3><p>统一接口 + 多后端实现，新增 Agent 类型零改动业务逻辑。经典的策略模式在 Go 中的落地。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Multica 的架构体现了几个核心洞察：</p>
+<ol>
+<li><strong>Agent 不是工具，是队友</strong>——这决定了整个系统的 UI&#x2F;UX 和数据模型</li>
+<li><strong>事件驱动优于直接调用</strong>——解耦让系统可持续演进</li>
+<li><strong>租约优于锁</strong>——分布式环境下的容错之道</li>
+<li><strong>优雅降级优于崩溃</strong>——Zod 验证 + 回退保证前端健壮性</li>
+<li><strong>可复用技能是复利</strong>——解决方案积累成组织能力</li>
+</ol>
+<p>对于一个 0.2 版本的开源项目来说，架构已经相当成熟。如果你在构建类似的多 Agent 协作平台，Multica 的设计值得参考。</p>
+<hr>
+<blockquote>
+<p>项目地址：<a target="_blank" rel="noopener" href="https://github.com/multica-ai/multica">github.com&#x2F;multica-ai&#x2F;multica</a></p>
+</blockquote>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8B%A5%E6%8A%B1Agent/" class="category-chain-item">拥抱Agent</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/AI-Agent/" class="print-no-link">#AI Agent</a>
+      
+        <a href="/tags/%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE/" class="print-no-link">#开源项目</a>
+      
+        <a href="/tags/%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1/" class="print-no-link">#架构设计</a>
+      
+        <a href="/tags/Go/" class="print-no-link">#Go</a>
+      
+        <a href="/tags/Next-js/" class="print-no-link">#Next.js</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Multica 源码解析：让 AI Agent 成为真正队友的架构设计</div>
+      <div>https://xiaopengqiu.github.io/2026/05/multica-architecture-deep-dive/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>xiaopengqiu</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年5月12日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/05/crewai-architecture-deep-dive/" title="crewAI 源码解析：多 Agent 智能化的架构设计">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">crewAI 源码解析：多 Agent 智能化的架构设计</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/05/stock-review-yuegui-take-profit/" title="粤桂股份止盈复盘：关键位突破后一次性卖出，少赚3.4万的教训">
+                        <span class="hidden-mobile">粤桂股份止盈复盘：关键位突破后一次性卖出，少赚3.4万的教训</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.5.1/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"qyPrAYIAey77o4bjcc5pMipZ-gzGzoHsz","appKey":"z6pYYg24nUCBJSA52IXmNkMe","path":"window.location.pathname","placeholder":"说点什么","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+
+</div>
+
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
