@@ -1,0 +1,1048 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="xiaopengqiu">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="背景：让 Agent 真正”跑起来”Agent 最大的价值不在”一次问答”，而在持续运转——监控部署、轮询 CI、定期巡检、把一件复杂的事反复推进直到完成。Claude Code 在这条路上提供了两条官方路径：内置的 &#x2F;loop 命令，以及社区插件 ralph-loop。两者目标相近（让同一 prompt 反复执行），机制却截然不同。 本文基于 Claude Code v2.x 二进制字符串、Sc">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Claude Code &#x2F;loop 机制深度解析：与 ralph-loop 的对比">
+<meta property="og:url" content="https://xiaopengqiu.github.io/2026/06/claude-loop-mechanism-deep-dive/index.html">
+<meta property="og:site_name" content="风雪归程">
+<meta property="og:description" content="背景：让 Agent 真正”跑起来”Agent 最大的价值不在”一次问答”，而在持续运转——监控部署、轮询 CI、定期巡检、把一件复杂的事反复推进直到完成。Claude Code 在这条路上提供了两条官方路径：内置的 &#x2F;loop 命令，以及社区插件 ralph-loop。两者目标相近（让同一 prompt 反复执行），机制却截然不同。 本文基于 Claude Code v2.x 二进制字符串、Sc">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-06-29T15:30:00.000Z">
+<meta property="article:modified_time" content="2026-07-01T04:43:49.293Z">
+<meta property="article:author" content="xiaopengqiu">
+<meta property="article:tag" content="AI Agent">
+<meta property="article:tag" content="Claude Code">
+<meta property="article:tag" content="循环机制">
+<meta property="article:tag" content="架构设计">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Claude Code /loop 机制深度解析：与 ralph-loop 的对比 - 风雪归程</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"xiaopengqiu.github.io","root":"/","version":"1.9.8","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":"qyPrAYIAey77o4bjcc5pMipZ-gzGzoHsz","app_key":"z6pYYg24nUCBJSA52IXmNkMe","server_url":null,"path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>风雪归程</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Claude Code /loop 机制深度解析：与 ralph-loop 的对比"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-06-29 23:30" pubdate>
+          2026年6月29日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          3.9k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          33 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Claude Code /loop 机制深度解析：与 ralph-loop 的对比</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="背景：让-Agent-真正”跑起来”"><a href="#背景：让-Agent-真正”跑起来”" class="headerlink" title="背景：让 Agent 真正”跑起来”"></a>背景：让 Agent 真正”跑起来”</h2><p>Agent 最大的价值不在”一次问答”，而在<strong>持续运转</strong>——监控部署、轮询 CI、定期巡检、把一件复杂的事反复推进直到完成。Claude Code 在这条路上提供了两条官方路径：内置的 <code>/loop</code> 命令，以及社区插件 <code>ralph-loop</code>。两者目标相近（让同一 prompt 反复执行），机制却截然不同。</p>
+<p>本文基于 Claude Code v2.x 二进制字符串、<code>ScheduleWakeup</code> &#x2F; <code>CronCreate</code> 工具自描述，以及 <code>ralph-loop</code> 插件源码，把两者的状态管理、退出判断、效果验证逐一拆开，并指出一个常被忽略的事实：<strong>两者都不做真正的”任务完成度验证”</strong>——这是通用循环原语的刻意边界，不是疏漏。</p>
+<span id="more"></span>
+
+<h2 id="一、-loop-的两种运行模式"><a href="#一、-loop-的两种运行模式" class="headerlink" title="一、/loop 的两种运行模式"></a>一、<code>/loop</code> 的两种运行模式</h2><p><code>/loop</code> 的核心设计是<strong>两种模式二选一</strong>，由是否提供时间间隔决定：</p>
+<table>
+<thead>
+<tr>
+<th>形态</th>
+<th>例子</th>
+<th>底层机制</th>
+<th>谁决定下一次触发时间</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>固定间隔模式</strong></td>
+<td><code>/loop 5m /babysit-prs</code></td>
+<td><code>CronCreate</code>（5 字段 cron 表达式）</td>
+<td>系统按 cron 表达式</td>
+</tr>
+<tr>
+<td><strong>动态自节拍模式</strong></td>
+<td><code>/loop check the deploy</code>（无间隔）</td>
+<td><code>ScheduleWakeup</code>（一次性唤醒）</td>
+<td>模型自己选 delay</td>
+</tr>
+</tbody></table>
+<ul>
+<li><code>/loop 5m foo</code> → 解析 <code>5m</code> 为 <code>*/5 * * * *</code>，调用 <code>CronCreate</code>，prompt 字段存 <code>foo</code>。</li>
+<li><code>/loop foo</code>（无间隔）→ 立即把 <code>foo</code> 当一次正常 user turn 投喂，<strong>期望模型在回合结束前自己调用 <code>ScheduleWakeup</code></strong> 安排下一次。</li>
+</ul>
+<p>动态模式还有一个”自治”变体：用户根本没给 prompt（<code>/loop</code> 单独使用），此时用 sentinel <code>&lt;&lt;autonomous-loop-dynamic&gt;&gt;</code> 替代 prompt，运行时在 fire 时把它展开成完整的”autonomous-loop 指令”。CronCreate 模式有对应的 <code>&lt;&lt;autonomous-loop&gt;&gt;</code> sentinel，两者不可混用。</p>
+<h2 id="二、状态管理：不是”裸循环”"><a href="#二、状态管理：不是”裸循环”" class="headerlink" title="二、状态管理：不是”裸循环”"></a>二、状态管理：不是”裸循环”</h2><h3 id="2-1-存储位置"><a href="#2-1-存储位置" class="headerlink" title="2.1 存储位置"></a>2.1 存储位置</h3><ul>
+<li><strong>持久化（durable）</strong>：<code>.claude/scheduled_tasks.json</code><ul>
+<li>每条记录：<code>{ id, cron, prompt, createdAt, recurring, createdBySessionId, createdByPid, createdByProcStart, lastFiredAt }</code></li>
+<li><code>createdBySessionId / createdByPid / createdByProcStart</code> 三元组用于区分是哪个会话创建的（多会话共存时的隔离）</li>
+<li><code>lastFiredAt</code> 在每次触发后被更新</li>
+</ul>
+</li>
+<li><strong>会话内存（session-only）</strong>：进程内 Map<ul>
+<li><code>CronCreate</code> 默认 <code>durable: false</code>，<code>ScheduleWakeup</code> 总是 session-only</li>
+<li>退出 Claude 进程即丢失</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-2-动态模式额外的-per-prompt-状态"><a href="#2-2-动态模式额外的-per-prompt-状态" class="headerlink" title="2.2 动态模式额外的 per-prompt 状态"></a>2.2 动态模式额外的 per-prompt 状态</h3><p><code>ScheduleWakeup</code> 内部按 prompt 文本维护一个状态对象：</p>
+<figure class="highlight dust"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs dust"><span class="hljs-template-variable">&#123; startedAt, lastScheduledFor, agedOut &#125;</span><br></code></pre></td></tr></table></figure>
+
+<ul>
+<li><code>startedAt</code>：这条 prompt 的循环何时开始（首次调用时设为 now）</li>
+<li><code>lastScheduledFor</code>：上次唤醒被定在何时</li>
+<li><code>agedOut</code>：是否已达到 7 天上限、被强制老化</li>
+</ul>
+<p>每次 <code>ScheduleWakeup(prompt, delay)</code>：</p>
+<ol>
+<li><strong>先取消该 prompt 已有的 pending loop wakeup</strong>（<code>kind === &quot;loop&quot; &amp;&amp; prompt === $</code>）—— 同一 prompt 任何时刻只有一个待唤醒。</li>
+<li>计算 <code>targetMs = now + delay*1000</code>，向上取整到分钟边界（秒&#x2F;毫秒清零）。</li>
+<li>注册一个 <code>kind: &quot;loop&quot;</code> 的 cron 任务，cron 表达式就是 <code>分 时 * * *</code>（仅此一分钟匹配一次）。</li>
+<li>更新 <code>lastScheduledFor</code>。</li>
+</ol>
+<h3 id="2-3-会话作用域"><a href="#2-3-会话作用域" class="headerlink" title="2.3 会话作用域"></a>2.3 会话作用域</h3><p><code>ScheduleWakeup</code>、<code>CronCreate(durable:false)</code>、<code>/loop</code> 三者都属于 <strong>“session-scoped cron tasks”</strong>——这正是 Stop hook 输入里 <code>session_crons</code> 字段的含义。Stop hook 拿到这个列表，就能区分”会话真的结束了”和”会话在等下一次唤醒”。</p>
+<h2 id="三、退出循环的路径"><a href="#三、退出循环的路径" class="headerlink" title="三、退出循环的路径"></a>三、退出循环的路径</h2><h3 id="3-1-固定间隔模式"><a href="#3-1-固定间隔模式" class="headerlink" title="3.1 固定间隔模式"></a>3.1 固定间隔模式</h3><ol>
+<li><strong>用户主动取消</strong>：<code>CronDelete &lt;id&gt;</code>，或 <code>/loop</code> 命令的取消子命令。</li>
+<li><strong>7 天自动过期</strong>：<code>recurringMaxAgeMs = 604800000</code>（7 天）。过滤掉 <code>createdAt + 7d &lt; now</code> 的任务。</li>
+<li><strong>会话结束</strong>：仅当 <code>durable: false</code> 时；进程退出即丢。</li>
+<li><strong>被 <code>recurring</code> 标志位为 false 的一次性任务</strong>：cron 字段编码单一触发时间，触发后自动移除。</li>
+</ol>
+<h3 id="3-2-动态自节拍模式"><a href="#3-2-动态自节拍模式" class="headerlink" title="3.2 动态自节拍模式"></a>3.2 动态自节拍模式</h3><ol>
+<li><strong>模型不再调用 <code>ScheduleWakeup</code></strong>：这是<strong>最自然的退出</strong>——回合结束前不安排下一次，循环就停了。对应 telemetry <code>tengu_loop_dynamic_wakeup_ends_turn</code>。</li>
+<li><strong>7 天老化</strong>：<code>if (now - startedAt &gt;= recurringMaxAgeMs) { agedOut = true; return null; }</code>。一旦 <code>agedOut</code>，后续 <code>ScheduleWakeup</code> 调用直接返回 null，不再注册新唤醒，并打 <code>tengu_loop_dynamic_wakeup_aged_out</code> 事件。</li>
+<li><strong>用户中断</strong>：<code>X88()</code> 取消所有 <code>kind === &quot;loop&quot;</code> 的 pending wakeup，并清理每个 prompt 的状态文件，打 <code>loop_cancel_all</code>。</li>
+<li><strong>会话结束</strong>：因为 <code>ScheduleWakeup</code> 是 session-only，进程退出即丢。</li>
+</ol>
+<h3 id="3-3-共同的保护机制"><a href="#3-3-共同的保护机制" class="headerlink" title="3.3 共同的保护机制"></a>3.3 共同的保护机制</h3><ul>
+<li>动态模式的 <code>delaySeconds</code> 被 clamp 到 <code>[60, 3600]</code>（<code>Math.max(60, Math.min(3600, ...))</code>）。</li>
+<li>固定间隔 cron 最小粒度 1 分钟。</li>
+<li>这避免了”1 秒一次”把 API 打爆。</li>
+</ul>
+<h2 id="四、循环执行效果的”状态检验”——这一项两者都没有"><a href="#四、循环执行效果的”状态检验”——这一项两者都没有" class="headerlink" title="四、循环执行效果的”状态检验”——这一项两者都没有"></a>四、循环执行效果的”状态检验”——这一项两者都没有</h2><p>这是关键，也是社区里最容易被误解的一点：</p>
+<ul>
+<li><strong><code>/loop</code> 完全不做效果验证</strong>。它只负责在 REPL idle 时把 prompt 当新一次 user turn 灌进去，跑完就跑完，下一轮要不要继续完全交给模型自己看观察结果决定。调度器不读输出、不判断成败。</li>
+<li><strong><code>ralph-loop</code> 也不做真验证</strong>。它判断”完成”的方式是<strong>字符串匹配</strong> <code>&lt;promise&gt;COMPLETE&lt;/promise&gt;</code>——这是模型<strong>声明</strong>“我做完了”，不是循环框架<strong>验证</strong>“你做完了”。模型说谎或自欺，框架不会发现。</li>
+</ul>
+<p>也就是说：循环框架提供的是<strong>调度 + 终止信号通道</strong>，不是<strong>任务完成度评估器</strong>。真正的”效果是否达成”始终由模型自己感知和判断，框架不参与。把”完成判断”外包给模型是有意为之的轻量设计——通用原语刻意不持有任务域知识。</p>
+<h3 id="4-1-为什么”做不到”是设计选择"><a href="#4-1-为什么”做不到”是设计选择" class="headerlink" title="4.1 为什么”做不到”是设计选择"></a>4.1 为什么”做不到”是设计选择</h3><p>循环框架要判断完成，需要一个<strong>与任务无关的完成判据</strong>。但”完成”的语义每个任务都不同：bug 修复看测试、部署看 CI、文档看审阅、监控看告警消除。没有一个通用判据能覆盖所有任务，所以只有两条路：</p>
+<ol>
+<li><strong>硬编码一个判据</strong>（ralph-loop 的 <code>&lt;promise&gt;COMPLETE&lt;/promise&gt;</code> 字符串）—— 等于让模型<strong>声明</strong>完成，框架不验证</li>
+<li><strong>完全交给模型</strong>（<code>/loop</code> 动态模式）—— 模型自己看环境决定续不续，框架只管调度</li>
+</ol>
+<h3 id="4-2-想要真验证，得在-loop-外面套一层"><a href="#4-2-想要真验证，得在-loop-外面套一层" class="headerlink" title="4.2 想要真验证，得在 loop 外面套一层"></a>4.2 想要真验证，得在 loop 外面套一层</h3><figure class="highlight nix"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs nix">loop &#123;<br>  agent 跑一轮<br>  verifier 独立检查（测试 <span class="hljs-symbol">/</span> 状态查询 <span class="hljs-symbol">/</span> 断言）<br>  <span class="hljs-keyword">if</span> verifier.<span class="hljs-params">pass:</span> break<br>  <span class="hljs-keyword">if</span> attempts <span class="hljs-operator">&gt;</span> <span class="hljs-params">N:</span> escalate<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><code>/loop</code> 能当调度层，但 verifier 得自己接——比如 prompt 里要求模型每轮跑 <code>npm test</code> 并把结果写到约定文件，外部 watcher 读文件决定是否 <code>CronDelete</code> 取消循环。这就把”完成判断”从模型自觉提升到外部客观判据。</p>
+<p>实际能落地的几种 verifier 形态：</p>
+<table>
+<thead>
+<tr>
+<th>验证形态</th>
+<th>例子</th>
+<th>loop 内置？</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>测试通过</td>
+<td>SWE-agent 跑 unit test</td>
+<td>否</td>
+</tr>
+<tr>
+<td>状态查询</td>
+<td>CI 状态 &#x2F; API 返回 200</td>
+<td>否</td>
+</tr>
+<tr>
+<td>人工审批</td>
+<td>human-in-the-loop gate</td>
+<td>否</td>
+</tr>
+<tr>
+<td>多 agent 互检</td>
+<td>critic agent 复核 worker 输出</td>
+<td>否</td>
+</tr>
+<tr>
+<td>断言脚本</td>
+<td><code>assert pytest.passed</code></td>
+<td>否</td>
+</tr>
+</tbody></table>
+<h2 id="五、动态模式深挖：模型即调度器"><a href="#五、动态模式深挖：模型即调度器" class="headerlink" title="五、动态模式深挖：模型即调度器"></a>五、动态模式深挖：模型即调度器</h2><p>动态模式是 <code>/loop</code> 三种形态里最”智能”的——它把”何时续、何时停”的决策权交给了能读环境的模型。这里展开讲透。</p>
+<h3 id="5-1-何时进入动态模式"><a href="#5-1-何时进入动态模式" class="headerlink" title="5.1 何时进入动态模式"></a>5.1 何时进入动态模式</h3><p>判断逻辑就一行：<strong>解析到时间 token → CronCreate；解析不到 → ScheduleWakeup 链</strong>。所以动态模式的触发条件就是”用户没给间隔，只给了一个要反复做的事”。</p>
+<p>自治变体（<code>/loop</code> 单独使用）走 sentinel <code>&lt;&lt;autonomous-loop-dynamic&gt;&gt;</code>——它和带 prompt 的动态模式是同一机制，只是 prompt 字段填的是 sentinel，运行时在 fire 时把它展开成完整的”autonomous-loop 指令”。</p>
+<h3 id="5-2-如何使用"><a href="#5-2-如何使用" class="headerlink" title="5.2 如何使用"></a>5.2 如何使用</h3><p>用户侧：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash">/loop &lt;要做的事&gt;          <span class="hljs-comment"># 不带间隔 → 动态模式</span><br>/loop                     <span class="hljs-comment"># 完全不带参数 → 自治动态模式</span><br></code></pre></td></tr></table></figure>
+
+<p>例如：</p>
+<figure class="highlight smali"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs smali">/loop<span class="hljs-built_in"> check </span>the deploy    <span class="hljs-comment"># 让模型自己决定多久看一次部署</span><br>/loop 看看 PR 有没有新评论  <span class="hljs-comment"># 同上，中文 prompt 也行</span><br></code></pre></td></tr></table></figure>
+
+<p>模型侧（这是动态模式的真正”使用方式”）——动态模式的核心契约是：<strong>每个回合结束前，模型必须自己决定要不要调 <code>ScheduleWakeup</code>，调了就续、不调就停</strong>。</p>
+<figure class="highlight dts"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs dts">ScheduleWakeup(<br><span class="hljs-symbol">  prompt:</span> <span class="hljs-string">&quot;check the deploy&quot;</span>,   <span class="hljs-meta"># 把 /loop 的原始 prompt 原样回传</span><br><span class="hljs-symbol">  delaySeconds:</span> <span class="hljs-number">270</span>,            <span class="hljs-meta"># 60–3600，自己选</span><br><span class="hljs-symbol">  reason:</span> <span class="hljs-string">&quot;watching CI run&quot;</span>     <span class="hljs-meta"># 一句话理由，进 telemetry + 给用户看</span><br>)<br></code></pre></td></tr></table></figure>
+
+<p>三个要点：</p>
+<ol>
+<li><strong><code>prompt</code> 每轮原样回传</strong>——不是重新写一遍，是把 <code>/loop</code> 的输入 verbatim 传回去，下一轮 fire 时它就是新的 user turn。</li>
+<li><strong><code>delaySeconds</code> 被 clamp 到 <code>[60, 3600]</code></strong>——低于 60 拉到 60，高于 3600 压到 3600。这是硬保护，防止”1 秒一次”打爆 API。</li>
+<li><strong>不调用 &#x3D; 结束循环</strong>——这是动态模式最自然的退出路径。</li>
+</ol>
+<h3 id="5-3-实际跑起来是什么样"><a href="#5-3-实际跑起来是什么样" class="headerlink" title="5.3 实际跑起来是什么样"></a>5.3 实际跑起来是什么样</h3><p>体验上：</p>
+<ol>
+<li><code>/loop check the deploy</code> 一发出，<strong>立即当作一次正常 user turn 跑</strong>（不是等第一个间隔）。</li>
+<li>模型跑完一轮（看 CI、查状态），在回合结束前调 <code>ScheduleWakeup(prompt, 270, &quot;CI 还在跑&quot;)</code>。</li>
+<li>270 秒后、REPL idle 时，调度器把同一个 prompt 灌回去 → 又一轮。</li>
+<li>模型看 CI 绿了 → <strong>不调 ScheduleWakeup</strong> → 循环自然终止。</li>
+</ol>
+<h3 id="5-4-选-delay-的启发式——动态模式”智能”的来源"><a href="#5-4-选-delay-的启发式——动态模式”智能”的来源" class="headerlink" title="5.4 选 delay 的启发式——动态模式”智能”的来源"></a>5.4 选 delay 的启发式——动态模式”智能”的来源</h3><p>模型按状态变化速度选间隔：</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>delay</th>
+<th>逻辑</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>状态快速变化（CI run、deploy）</td>
+<td><strong>60–270s</strong></td>
+<td>留在 5min cache TTL 内，命中缓存、便宜</td>
+</tr>
+<tr>
+<td>状态慢变 &#x2F; 真正空闲 &#x2F; fallback 心跳</td>
+<td><strong>300–3600s</strong></td>
+<td>付 cache miss 代价换更长等待</td>
+</tr>
+<tr>
+<td>无特定信号空转</td>
+<td><strong>1200–1800s</strong>（默认）</td>
+<td>20–30 分钟 tick 一次</td>
+</tr>
+<tr>
+<td>恰好 300s</td>
+<td><strong>避免</strong></td>
+<td>最差组合：付了 cache miss 又没摊销</td>
+</tr>
+</tbody></table>
+<p>关键提醒：<strong>harness-tracked 的活不要 poll</strong>。当 harness 能追踪的后台任务（Bash <code>run_in_background</code>、子 agent）完成时，系统会自动重新唤起你，此时再 <code>ScheduleWakeup</code> 短轮询是浪费。短间隔只用于”harness 看不到的外部状态”（CI run、deploy、remote queue），并配 fallback 长心跳兜底。</p>
+<h3 id="5-5-核心机制实现"><a href="#5-5-核心机制实现" class="headerlink" title="5.5 核心机制实现"></a>5.5 核心机制实现</h3><p><strong>底层：一次性 cron，不是 sleep。</strong> <code>ScheduleWakeup</code> 不阻塞、不 sleep。它注册的是一个 <code>kind: &quot;loop&quot;</code> 的一次性 cron 任务，cron 表达式只有 <code>分 时 * * *</code>——仅匹配目标分钟那一次。触发后自动失效。</p>
+<figure class="highlight arcade"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs arcade">targetMs = <span class="hljs-built_in">now</span> + delay*<span class="hljs-number">1000</span><br>target   = ceilToMinuteBoundary(targetMs)   <span class="hljs-comment">// 秒/毫秒清零</span><br>cronExpr = <span class="hljs-string">`<span class="hljs-subst">$&#123;target.<span class="hljs-built_in">min</span>&#125;</span> <span class="hljs-subst">$&#123;target.<span class="hljs-built_in">hour</span>&#125;</span> * * *`</span><br>registerCron(&#123; <span class="hljs-attr">kind</span>: <span class="hljs-string">&quot;loop&quot;</span>, <span class="hljs-attr">cron</span>: cronExpr, prompt, <span class="hljs-attr">recurring</span>: <span class="hljs-literal">false</span> &#125;)<br></code></pre></td></tr></table></figure>
+
+<p><strong>per-prompt 状态对象</strong>：每次 <code>ScheduleWakeup(prompt, delay)</code> 先取消该 prompt 已有的 pending loop wakeup（同一 prompt 任何时刻只有一个待唤醒），算 <code>targetMs</code>，向上取整到分钟，注册 cron，更新 <code>lastScheduledFor</code>。</p>
+<p><strong>cache 窗口对齐（动态模式独有的精细活）</strong>：</p>
+<figure class="highlight gams"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs gams">E3<span class="hljs-symbol">$</span> = <span class="hljs-number">300000</span>  <span class="hljs-comment">// 5 分钟 prompt-cache TTL</span><br><span class="hljs-keyword">if</span> (delay*<span class="hljs-number">1000</span> &lt;= E3<span class="hljs-symbol">$</span>) &#123;<br>  <span class="hljs-comment">// 把触发时间往前拉，使其落在 cache 窗口内</span><br>  <span class="hljs-keyword">while</span> (target - now &gt; E3<span class="hljs-symbol">$</span> - cacheLeadMs) target -= <span class="hljs-number">60000</span>;<br>&#125;<br>cacheLeadMs = <span class="hljs-number">15000</span>  <span class="hljs-comment">// 前拉 15 秒留余量</span><br></code></pre></td></tr></table></figure>
+
+<p>效果：用户选 270s delay，调度器会把实际触发时间往前拉到约 4:45 处，使其仍在 5 分钟 cache 窗口内 → 下一轮命中 prompt cache → 便宜。这正是工具描述里”60–270s 缓存命中”的来源。</p>
+<p><strong>7 天老化硬上限</strong>：</p>
+<figure class="highlight arcade"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs arcade"><span class="hljs-keyword">if</span> (<span class="hljs-built_in">now</span> - startedAt &gt;= recurringMaxAgeMs) &#123;   <span class="hljs-comment">// 604800000 = 7天</span><br>  agedOut = <span class="hljs-literal">true</span>;<br>  <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;   <span class="hljs-comment">// 不再注册新 wakeup</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>这是动态模式的安全网——模型忘记停也不会永远跑。</p>
+<p><strong>只在 REPL idle 时触发</strong>：调度器<strong>绝不在 mid-query 中途</strong>把 prompt 灌进去——必须等当前回合结束、REPL idle。配合 Stop hook 的协调：</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs css"><span class="hljs-selector-attr">[loop-tick]</span> <span class="hljs-selector-tag">Stop</span> hook block discarded (turn is yielding <span class="hljs-selector-tag">to</span> <span class="hljs-selector-tag">a</span> cron)<br></code></pre></td></tr></table></figure>
+
+<p>当一个 loop cron 即将触发时，已挂的 Stop hook 的 block 决策被丢弃——避免 Stop hook 和 cron 同时灌 prompt 造成双重投喂。</p>
+<h3 id="5-6-固定间隔模式的抖动（避免雷鸣群）"><a href="#5-6-固定间隔模式的抖动（避免雷鸣群）" class="headerlink" title="5.6 固定间隔模式的抖动（避免雷鸣群）"></a>5.6 固定间隔模式的抖动（避免雷鸣群）</h3><p>为避免所有用户都在整点触发压垮 API，对触发时间加哈希抖动：</p>
+<ul>
+<li><code>recurringFrac = 0.5</code>、<code>recurringCapMs = 1800000</code>（30 分钟封顶）：recurring 任务的下次触发可往前最多拉 0.5×interval、最多 30 分钟。</li>
+<li><code>oneShotMaxMs = 90000</code>、<code>oneShotMinuteMod = 30</code>：一次性任务在 30 分钟整数倍时最多往前拉 90 秒。</li>
+<li>抖动量由 cron 任务 ID 前 8 位十六进制做哈希决定——每个任务的抖动是确定性的。</li>
+</ul>
+<h2 id="六、与-ralph-loop-插件的对比"><a href="#六、与-ralph-loop-插件的对比" class="headerlink" title="六、与 ralph-loop 插件的对比"></a>六、与 <code>ralph-loop</code> 插件的对比</h2><p>官方 <code>ralph-loop</code> 插件实现的是<strong>同步、阻塞式</strong>循环：</p>
+<ul>
+<li>用 <strong>Stop hook</strong> 拦截 Claude 的退出尝试。</li>
+<li>每次模型想结束 → Stop hook 返回 <code>{ decision: &quot;block&quot;, reason: &lt;原始 prompt&gt; }</code> → 同一 prompt 被灌回 → 模型继续。</li>
+<li>状态文件 <code>.claude/ralph-loop.local.md</code>（YAML frontmatter：<code>iteration</code>、<code>max_iterations</code>、<code>completion_promise</code>、<code>session_id</code>）。</li>
+<li>退出条件：达到 <code>max_iterations</code>，或检测到 <code>&lt;promise&gt;COMPLETE&lt;/promise&gt;</code> 字符串。</li>
+<li>完全在<strong>当前会话内</strong>同步发生，没有时间间隔概念——它不是”每 5 分钟查一次”，而是”不停干直到完成”。</li>
+</ul>
+<p><code>/loop</code> 则是<strong>异步、时间驱动</strong>的：</p>
+<ul>
+<li>不阻塞退出，REPL idle 时才触发。</li>
+<li>触发间隔由用户（固定）或模型（动态）决定。</li>
+<li>适合”周期性轮询状态”而非”持续干活到完成”。</li>
+</ul>
+<p>两者可视为互补：ralph-loop 适合”把这件事做完”，<code>/loop</code> 适合”定期回头看一眼”。</p>
+<h3 id="6-1-三维度对照表"><a href="#6-1-三维度对照表" class="headerlink" title="6.1 三维度对照表"></a>6.1 三维度对照表</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th><code>/loop</code>（固定间隔）</th>
+<th><code>/loop</code>（动态模式）</th>
+<th><code>ralph-loop</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>驱动方式</td>
+<td>时间（cron）</td>
+<td>时间（一次性 cron）</td>
+<td>事件（Stop hook 拦截）</td>
+</tr>
+<tr>
+<td>同步&#x2F;异步</td>
+<td>异步</td>
+<td>异步</td>
+<td>同步阻塞</td>
+</tr>
+<tr>
+<td>谁定节奏</td>
+<td>用户写死</td>
+<td>模型每轮选</td>
+<td>不存在节奏（连续干）</td>
+</tr>
+<tr>
+<td>状态存储</td>
+<td><code>.claude/scheduled_tasks.json</code> 或进程内存</td>
+<td>进程内存 + per-prompt 状态</td>
+<td><code>.claude/ralph-loop.local.md</code></td>
+</tr>
+<tr>
+<td>自然退出</td>
+<td><code>CronDelete</code></td>
+<td>模型不调即停</td>
+<td><code>&lt;promise&gt;COMPLETE&lt;/promise&gt;</code> 字符串</td>
+</tr>
+<tr>
+<td>强制退出</td>
+<td>7 天老化</td>
+<td>7 天老化</td>
+<td><code>max_iterations</code></td>
+</tr>
+<tr>
+<td>cache 友好</td>
+<td>否（整点触发常 miss）</td>
+<td>是（模型选 60–270s）</td>
+<td>否（连续会话）</td>
+</tr>
+<tr>
+<td>效果验证</td>
+<td>无</td>
+<td>无（但模型可自感知）</td>
+<td>无（字符串匹配伪验证）</td>
+</tr>
+<tr>
+<td>适合场景</td>
+<td>已知节奏的轮询</td>
+<td>节奏取决于状态变化</td>
+<td>把一件事干完为止</td>
+</tr>
+</tbody></table>
+<h3 id="6-2-何时用哪个"><a href="#6-2-何时用哪个" class="headerlink" title="6.2 何时用哪个"></a>6.2 何时用哪个</h3><ul>
+<li><strong><code>/loop 5m ...</code></strong>：节奏明确（每 5 分钟查一次健康检查、每 10 分钟拉一次 PR 状态）。简单、可预测、可持久化跨会话存活。</li>
+<li><strong><code>/loop &lt;task&gt;</code>（动态）</strong>：节奏取决于外部状态变化速度。CI 还要 3 分钟、部署还要 10 分钟——让模型自己挑 delay 最划算。这是离”循环 + 智能停”最近的形态。</li>
+<li><strong><code>ralph-loop</code></strong>：任务有明确的”完成”定义（修一个 bug、写一篇文章），希望模型持续干直到完成或达到上限。不关心时间间隔，只关心”做完”。</li>
+</ul>
+<h2 id="七、关键数据结构与常量速查"><a href="#七、关键数据结构与常量速查" class="headerlink" title="七、关键数据结构与常量速查"></a>七、关键数据结构与常量速查</h2><figure class="highlight dts"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs dts"><span class="hljs-comment">// 默认配置（tengu_kairos_cron_config 特性开关可覆盖）</span><br>Em = <span class="hljs-punctuation">&#123;</span><br><span class="hljs-symbol">  recurringFrac:</span> <span class="hljs-number">0.5</span>,           <span class="hljs-comment">// recurring 抖动 = 0.5 × interval</span><br><span class="hljs-symbol">  recurringCapMs:</span> <span class="hljs-number">1800000</span>,      <span class="hljs-comment">// 抖动最多 30 分钟</span><br><span class="hljs-symbol">  oneShotMaxMs:</span> <span class="hljs-number">90000</span>,          <span class="hljs-comment">// 一次性任务最多抖动 90 秒</span><br><span class="hljs-symbol">  oneShotFloorMs:</span> <span class="hljs-number">0</span>,<br><span class="hljs-symbol">  oneShotMinuteMod:</span> <span class="hljs-number">30</span>,         <span class="hljs-comment">// 仅在 30 的整数分钟触发时抖动</span><br><span class="hljs-symbol">  recurringMaxAgeMs:</span> <span class="hljs-number">604800000</span>, <span class="hljs-comment">// 7 天强制过期</span><br><span class="hljs-symbol">  cacheLeadMs:</span> <span class="hljs-number">15000</span>            <span class="hljs-comment">// cache 窗口前拉 15 秒</span><br><span class="hljs-punctuation">&#125;</span><br><br>E3$ = <span class="hljs-number">300000</span>     <span class="hljs-comment">// 5 分钟 = prompt-cache TTL</span><br>S3$ = <span class="hljs-number">60</span>         <span class="hljs-comment">// delaySeconds 下限</span><br>J88 = <span class="hljs-number">3600</span>       <span class="hljs-comment">// delaySeconds 上限</span><br></code></pre></td></tr></table></figure>
+
+<p>存储文件：<code>.claude/scheduled_tasks.json</code></p>
+<p>特性开关（feature flags，可被 config 覆盖）：</p>
+<ul>
+<li><code>tengu_kairos_cron</code> — 启用 CronCreate（默认 true）</li>
+<li><code>tengu_kairos_cron_durable</code> — 允许 durable 持久化（默认 true）</li>
+<li><code>tengu_kairos_loop_dynamic</code> — 启用动态 &#x2F;loop（默认 false，灰度中）</li>
+<li><code>tengu_kairos_loop_persistent</code> — 动态模式的”persistent preamble”变体</li>
+<li><code>CLAUDE_CODE_DISABLE_CRON</code> 环境变量可整体关闭 cron</li>
+<li><code>CLAUDE_CODE_LOOP_PERSISTENT</code> 环境变量开启 persistent preamble</li>
+</ul>
+<h2 id="八、一句话总结"><a href="#八、一句话总结" class="headerlink" title="八、一句话总结"></a>八、一句话总结</h2><p><code>/loop</code> &#x3D; <strong>“把同一 prompt 按时间表反复投喂给模型”</strong> 的封装。</p>
+<ul>
+<li>给间隔 → 用 <code>CronCreate</code> 走 5 字段 cron，受 7 天上限保护。</li>
+<li>不给间隔 → 用 <code>ScheduleWakeup</code>，模型自己选 delay（60–3600 秒），不调用即终止。</li>
+<li>状态要么在 <code>.claude/scheduled_tasks.json</code>（持久）要么在进程内存（会话级）。</li>
+<li>每次触发只是把 prompt 当新 user turn 注入，效果检验由模型自己看观察结果决定。</li>
+<li>调度器自带抖动、cache 窗口对齐、Stop hook 协调，确保不压垮 API 也不与 Stop hook 冲突。</li>
+</ul>
+<p>与 <code>ralph-loop</code> 对照：两者都有真正的状态管理和退出机制，但<strong>效果验证是两者的共同弱项</strong>——<code>/loop</code> 完全不做，<code>ralph-loop</code> 用字符串匹配伪验证。这不是”做得简单”，而是通用循环原语刻意把验证责任外包给上层。真要语义级完成判断，需要在循环外接一个 domain-specific 的 oracle（测试、状态探测、多 agent 互检、断言脚本），loop 本身只负责”按时把 prompt 灌回去”。</p>
+<p>动态模式是 <code>/loop</code> 离”循环 + 智能停”最近的形态——它把”是否继续”的决策权留给了能读环境的模型，而不是死板地按 cron 触发。代价是<strong>完全依赖模型自觉</strong>：模型忘了调 <code>ScheduleWakeup</code> 就提前停了，模型一直调就跑满 7 天。这也是”效果验证靠模型自觉”的同一面硬币。</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8B%A5%E6%8A%B1Agent/" class="category-chain-item">拥抱Agent</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Claude-Code/" class="print-no-link">#Claude Code</a>
+      
+        <a href="/tags/AI-Agent/" class="print-no-link">#AI Agent</a>
+      
+        <a href="/tags/%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1/" class="print-no-link">#架构设计</a>
+      
+        <a href="/tags/%E5%BE%AA%E7%8E%AF%E6%9C%BA%E5%88%B6/" class="print-no-link">#循环机制</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Claude Code /loop 机制深度解析：与 ralph-loop 的对比</div>
+      <div>https://xiaopengqiu.github.io/2026/06/claude-loop-mechanism-deep-dive/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>xiaopengqiu</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年6月29日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/06/agent-team-engineering-patterns/" title="Agent Team 工程范式：从 while 循环到自治协作">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Agent Team 工程范式：从 while 循环到自治协作</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/06/azur-lane-anti-censorship-guide/" title="Loop Engineering：从 Prompt 到 Loop，AI 工程的四次瓶颈迁移">
+                        <span class="hidden-mobile">Loop Engineering：从 Prompt 到 Loop，AI 工程的四次瓶颈迁移</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.5.1/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"qyPrAYIAey77o4bjcc5pMipZ-gzGzoHsz","appKey":"z6pYYg24nUCBJSA52IXmNkMe","path":"window.location.pathname","placeholder":"说点什么","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+
+</div>
+
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

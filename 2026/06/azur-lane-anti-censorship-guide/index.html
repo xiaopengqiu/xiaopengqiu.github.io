@@ -1,0 +1,871 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="xiaopengqiu">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="本文总结自小林coding的微信公众号文章，梳理了从 Prompt Engineering 到 Loop Engineering 的演进脉络，拆解了一个 Loop 的五大组件，并分享了落地实操与三盆冷水。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Loop Engineering：从 Prompt 到 Loop，AI 工程的四次瓶颈迁移">
+<meta property="og:url" content="https://xiaopengqiu.github.io/2026/06/azur-lane-anti-censorship-guide/index.html">
+<meta property="og:site_name" content="风雪归程">
+<meta property="og:description" content="本文总结自小林coding的微信公众号文章，梳理了从 Prompt Engineering 到 Loop Engineering 的演进脉络，拆解了一个 Loop 的五大组件，并分享了落地实操与三盆冷水。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-06-15T06:30:00.000Z">
+<meta property="article:modified_time" content="2026-07-01T04:43:49.293Z">
+<meta property="article:author" content="xiaopengqiu">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Agent">
+<meta property="article:tag" content="Claude Code">
+<meta property="article:tag" content="Coding Agent">
+<meta property="article:tag" content="Loop Engineering">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Loop Engineering：从 Prompt 到 Loop，AI 工程的四次瓶颈迁移 - 风雪归程</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"xiaopengqiu.github.io","root":"/","version":"1.9.8","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":"qyPrAYIAey77o4bjcc5pMipZ-gzGzoHsz","app_key":"z6pYYg24nUCBJSA52IXmNkMe","server_url":null,"path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>风雪归程</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Loop Engineering：从 Prompt 到 Loop，AI 工程的四次瓶颈迁移"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-06-15 14:30" pubdate>
+          2026年6月15日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          1.9k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          17 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Loop Engineering：从 Prompt 到 Loop，AI 工程的四次瓶颈迁移</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>本文总结自小林coding的微信公众号文章，梳理了从 Prompt Engineering 到 Loop Engineering 的演进脉络，拆解了一个 Loop 的五大组件，并分享了落地实操与三盆冷水。</p>
+<span id="more"></span>
+
+<blockquote>
+<p>原文链接：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/fhx_Lozs5G-sX11b7wnZgg">https://mp.weixin.qq.com/s/fhx_Lozs5G-sX11b7wnZgg</a><br>作者：小林coding<br>发布时间：2026年6月14日</p>
+</blockquote>
+<h2 id="背景：新词不断，到底在-engineering-什么？"><a href="#背景：新词不断，到底在-engineering-什么？" class="headerlink" title="背景：新词不断，到底在 engineering 什么？"></a>背景：新词不断，到底在 engineering 什么？</h2><p>AI 圈造新词的速度已经超过了学习速度：前年是 Prompt Engineering，去年是 Context Engineering，今年 3 月是 Harness Engineering，现在 6 月又来了 <strong>Loop Engineering</strong>。</p>
+<p>但这不是营销轮换——每个新词的出现，背后都是同一件事：<strong>上一个瓶颈被解决了，新的瓶颈暴露出来了。</strong></p>
+<p>点火的三个关键人物在同一周说了同一件事：</p>
+<ul>
+<li><strong>Peter Steinberger</strong>（OpenClaw 作者）：「你不该再给 coding agent 打 prompt 了，你该去设计那个给 agent 打 prompt 的 loop。」</li>
+<li><strong>Addy Osmani</strong>（Google Cloud AI 总监）：在长文中给出了正式定义。</li>
+<li><strong>Boris Cherny</strong>（Claude Code 创始人）：「我已经不 prompt Claude 了，是 loop 在运行着 prompt Claude。我的工作是写 loop。」</li>
+</ul>
+<h2 id="Q1：四个-Engineering-的瓶颈迁移"><a href="#Q1：四个-Engineering-的瓶颈迁移" class="headerlink" title="Q1：四个 Engineering 的瓶颈迁移"></a>Q1：四个 Engineering 的瓶颈迁移</h2><p>模型每变强一截，瓶颈就往外移一层：</p>
+<h3 id="1-Prompt-Engineering（2023）"><a href="#1-Prompt-Engineering（2023）" class="headerlink" title="1. Prompt Engineering（2023）"></a>1. Prompt Engineering（2023）</h3><p>模型只会一问一答，你问得好不好直接决定答得好不好。大家研究话术：角色扮演、思维链、少样本示例。<strong>瓶颈在「怎么说」。</strong></p>
+<h3 id="2-Context-Engineering（2025）"><a href="#2-Context-Engineering（2025）" class="headerlink" title="2. Context Engineering（2025）"></a>2. Context Engineering（2025）</h3><p>模型变强了，光会说话不够用。你让它改 bug，它没看过你的代码、不知道你的规范。<strong>瓶颈从「怎么问」移到了「喂什么」。</strong></p>
+<p>把对的代码、文档、工具、历史记忆，在对的时机塞进上下文窗口——这就是上下文工程。</p>
+<h3 id="3-Harness-Engineering（2026-年初）"><a href="#3-Harness-Engineering（2026-年初）" class="headerlink" title="3. Harness Engineering（2026 年初）"></a>3. Harness Engineering（2026 年初）</h3><p>模型已经能连续干几个小时的活了，卡脖子的变成了工具、权限、沙箱、子 agent、上下文管理等运行环境。业内公式：<strong>Agent &#x3D; 模型 + Harness</strong>。</p>
+<h3 id="4-Loop-Engineering（2026-年中）"><a href="#4-Loop-Engineering（2026-年中）" class="headerlink" title="4. Loop Engineering（2026 年中）"></a>4. Loop Engineering（2026 年中）</h3><p>话术、材料、驾驶舱都解决了，最后的瓶颈是——<strong>你自己</strong>。模型在等你布置任务，harness 在等你启动。你睡觉，它就停工。Loop Engineering 瞄准的就是这最后一环：设计一个系统，让「下一次回车」不再由你来按。</p>
+<h2 id="Q2：Loop-Engineering-到底是什么？"><a href="#Q2：Loop-Engineering-到底是什么？" class="headerlink" title="Q2：Loop Engineering 到底是什么？"></a>Q2：Loop Engineering 到底是什么？</h2><p>Osmani 的正式定义：</p>
+<blockquote>
+<p>「Loop Engineering 就是把『亲自给 agent 写 prompt 的那个你』替换掉。你转而去设计那个代替你做这件事的系统。」</p>
+</blockquote>
+<p>过去的协作方式是<strong>回合制</strong>——你写一条 prompt，读输出，再写下一条。Loop Engineering 说的是，把「发现任务、布置任务、检查结果、决定下一步」设计成一个能自己运转的循环。</p>
+<p>打个比方：以前你是接线员，每个电话都要亲自接答；现在你是工单系统设计师——分流规则、办结标准、升级机制定好，系统自己转。</p>
+<p><strong>杠杆支点移动了</strong>：以前写一条好 prompt，收益是「这一次回答变好」；现在设计一个好 loop，收益是「之后每一次循环都变好」。投入从消耗品变成了资产。</p>
+<h2 id="Q3：一个-Loop-的五大件-记忆"><a href="#Q3：一个-Loop-的五大件-记忆" class="headerlink" title="Q3：一个 Loop 的五大件 + 记忆"></a>Q3：一个 Loop 的五大件 + 记忆</h2><h3 id="1-自动化——心跳"><a href="#1-自动化——心跳" class="headerlink" title="1. 自动化——心跳"></a>1. 自动化——心跳</h3><p>定时或事件触发。心跳有了，循环才算活着。</p>
+<h3 id="2-Worktree——让并行不变成打架"><a href="#2-Worktree——让并行不变成打架" class="headerlink" title="2. Worktree——让并行不变成打架"></a>2. Worktree——让并行不变成打架</h3><p>给每个 agent 一个独立的工作目录和分支，共享仓库历史但物理互不干扰。各干各的，最后各开各的 PR。</p>
+<h3 id="3-Skill——治好「金鱼记忆」"><a href="#3-Skill——治好「金鱼记忆」" class="headerlink" title="3. Skill——治好「金鱼记忆」"></a>3. Skill——治好「金鱼记忆」</h3><p>把项目知识写成文件放在仓库里，让 agent 该用的时候自己读。没有 skill，loop 每个周期都从零重新推导你的项目；有了 skill，知识是复利的。</p>
+<h3 id="4-Connector——摸到真实世界"><a href="#4-Connector——摸到真实世界" class="headerlink" title="4. Connector——摸到真实世界"></a>4. Connector——摸到真实世界</h3><p>基于 MCP 协议的连接器，把 issue 工单、监控、消息、PR 等外部系统接进来。一个完整的 loop 会自己开好 PR、关联工单、CI 变绿后通知人。</p>
+<h3 id="5-Sub-agent——写的人和查的人必须分开"><a href="#5-Sub-agent——写的人和查的人必须分开" class="headerlink" title="5. Sub-agent——写的人和查的人必须分开"></a>5. Sub-agent——写的人和查的人必须分开</h3><blockquote>
+<p>写代码的那个模型，给自己的作业打分时，实在太手下留情了。</p>
+</blockquote>
+<p>让 A 出方案，让干净上下文的 B 来挑刺。B 没有「希望自己是对的」的包袱，挑出来的问题才是真问题。</p>
+<h3 id="记忆——Loop-的命根子"><a href="#记忆——Loop-的命根子" class="headerlink" title="记忆——Loop 的命根子"></a>记忆——Loop 的命根子</h3><p>模型在两次运行之间会忘掉一切。解法朴素：把记忆放在磁盘上（markdown 文件、任务看板），让它活在单次对话之外。</p>
+<blockquote>
+<p>「Agent 会忘，但 repo 不会。」—— Osmani</p>
+</blockquote>
+<h2 id="Q4：一个真实-Loop-的样子"><a href="#Q4：一个真实-Loop-的样子" class="headerlink" title="Q4：一个真实 Loop 的样子"></a>Q4：一个真实 Loop 的样子</h2><p>Osmani 给出的晨间 Triage Loop：</p>
+<ol>
+<li><strong>每天早晨自动触发</strong>，调用分诊 skill</li>
+<li><strong>读昨天的 CI 失败、未关闭 issue、最近提交</strong>，把值得处理的问题写进状态文件</li>
+<li>对每个问题<strong>开隔离 worktree</strong>，派 sub-agent 起草修复</li>
+<li><strong>第二个 sub-agent 审查</strong>，对照 skill 规范和测试</li>
+<li><strong>Connector 自动开 PR</strong>、更新工单</li>
+<li>搞不定的问题丢进<strong>待办收件箱</strong>，等人来看</li>
+<li>所有经过<strong>写回状态文件</strong>，明天从今天停下的地方继续</li>
+</ol>
+<blockquote>
+<p>整个过程里，你只设计了一次，中间任何一步都没有写过 prompt。</p>
+</blockquote>
+<h2 id="Q5：现在就能搭——工具对照"><a href="#Q5：现在就能搭——工具对照" class="headerlink" title="Q5：现在就能搭——工具对照"></a>Q5：现在就能搭——工具对照</h2><table>
+<thead>
+<tr>
+<th>部件</th>
+<th>职责</th>
+<th>Codex</th>
+<th>Claude Code</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>自动化</td>
+<td>定时发现和分诊</td>
+<td>Automations 面板</td>
+<td>计划任务、<code>/loop</code>、hooks</td>
+</tr>
+<tr>
+<td>Worktree</td>
+<td>隔离并行任务</td>
+<td>内置 worktree</td>
+<td><code>git worktree</code>、隔离配置</td>
+</tr>
+<tr>
+<td>Skill</td>
+<td>固化项目知识</td>
+<td>Agent Skills</td>
+<td>Agent Skills</td>
+</tr>
+<tr>
+<td>Connector</td>
+<td>连接外部工具</td>
+<td>MCP Connectors</td>
+<td>MCP servers</td>
+</tr>
+<tr>
+<td>Sub-agent</td>
+<td>写查分离</td>
+<td>配置文件定义子 agent</td>
+<td>子 agent、agent teams</td>
+</tr>
+<tr>
+<td>记忆</td>
+<td>追踪进度</td>
+<td>markdown &#x2F; 工单系统</td>
+<td>markdown &#x2F; 工单系统</td>
+</tr>
+</tbody></table>
+<h3 id="实操：30-秒搭出第一个-Loop"><a href="#实操：30-秒搭出第一个-Loop" class="headerlink" title="实操：30 秒搭出第一个 Loop"></a>实操：30 秒搭出第一个 Loop</h3><p>场景：PR 提了之后等 CI，挂了切回去改、推送、再等，一下午切了八次窗口。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash">/loop 10m 检查当前分支 PR 的 CI 状态：有失败的检查就读日志、修复、推送；<br>全部变绿后停下来，给我一句话总结改了什么<br></code></pre></td></tr></table></figure>
+
+<p>拆开看：<code>10m</code> 是心跳，中间是任务，最后一句是停止条件加汇报。</p>
+<p>两个使用边界：</p>
+<ul>
+<li><code>/loop</code> 活在当前会话里，关掉电脑就停了。要全天候运行需要用计划任务或云端 routines。</li>
+<li>最小 loop 只有心跳、任务和停止条件，worktree 和 sub-agent 可以后续按需加上。</li>
+</ul>
+<blockquote>
+<p>部件是一件一件长出来的，不是一天配齐的。</p>
+</blockquote>
+<h2 id="Q6：三盆冷水"><a href="#Q6：三盆冷水" class="headerlink" title="Q6：三盆冷水"></a>Q6：三盆冷水</h2><p>Osmani 本人直说：「现在还早，我是持怀疑态度的。」</p>
+<h3 id="冷水一：验证仍然归你"><a href="#冷水一：验证仍然归你" class="headerlink" title="冷水一：验证仍然归你"></a>冷水一：验证仍然归你</h3><p>无人值守运行的 loop，也是无人值守犯错的 loop。检查 agent 嘴里的「done」只是一个<strong>声明</strong>，不是一个<strong>证明</strong>。</p>
+<h3 id="冷水二：理解债越顺滑涨得越快"><a href="#冷水二：理解债越顺滑涨得越快" class="headerlink" title="冷水二：理解债越顺滑涨得越快"></a>冷水二：理解债越顺滑涨得越快</h3><p>Loop 交付你没写过的代码越快，「仓库里实际存在的东西」和「你脑子里真正理解的东西」之间的鸿沟就越大。这叫<strong>理解债（Comprehension Debt）</strong>——代码可能不烂，但你不知道它为什么是对的。</p>
+<h3 id="冷水三：认知投降最舒服也最危险"><a href="#冷水三：认知投降最舒服也最危险" class="headerlink" title="冷水三：认知投降最舒服也最危险"></a>冷水三：认知投降最舒服也最危险</h3><p>不再对产出有自己的观点，它给什么就收什么——这叫<strong>认知投降（Cognitive Surrender）</strong>。</p>
+<blockquote>
+<p>「带着判断力去设计 loop，它是解药；为了逃避思考去设计 loop，它是助燃剂。同一个动作，相反的结果。」—— Osmani</p>
+</blockquote>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>三句话浓缩全文：</p>
+<ol>
+<li><strong>四次瓶颈迁移</strong>：Prompt → Context → Harness → Loop，模型越强，瓶颈越往外移，最后移到了「亲自按回车的你」身上。</li>
+<li><strong>五大件 + 记忆</strong>：自动化是心跳，worktree 防打架，skill 治金鱼记忆，connector 摸到真实世界，sub-agent 写查分离，状态文件让明天接得上今天。</li>
+<li><strong>三笔账同时变大</strong>：验证、理解债、认知投降——工具分不出你是在加速还是在逃避，你自己分得出。</li>
+</ol>
+<blockquote>
+<p>「两个人可以搭一模一样的 loop，得到完全相反的结果。一个用它在自己深刻理解的工作上加速，另一个用它彻底逃避理解工作。Loop 分不出区别，你分得出。」—— Osmani</p>
+</blockquote>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://x.com/steipete/status/2063697162748260627">Peter Steinberger 的原帖</a></li>
+<li><a target="_blank" rel="noopener" href="https://addyosmani.com/blog/loop-engineering">Addy Osmani《Loop Engineering》</a></li>
+<li>Boris Cherny 访谈《Claude Code &amp; the Future of Engineering》</li>
+</ul>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/AI-%E5%B7%A5%E7%A8%8B/" class="category-chain-item">AI 工程</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Claude-Code/" class="print-no-link">#Claude Code</a>
+      
+        <a href="/tags/AI/" class="print-no-link">#AI</a>
+      
+        <a href="/tags/Loop-Engineering/" class="print-no-link">#Loop Engineering</a>
+      
+        <a href="/tags/Agent/" class="print-no-link">#Agent</a>
+      
+        <a href="/tags/Coding-Agent/" class="print-no-link">#Coding Agent</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Loop Engineering：从 Prompt 到 Loop，AI 工程的四次瓶颈迁移</div>
+      <div>https://xiaopengqiu.github.io/2026/06/azur-lane-anti-censorship-guide/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>xiaopengqiu</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年6月15日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2026/06/claude-loop-mechanism-deep-dive/" title="Claude Code /loop 机制深度解析：与 ralph-loop 的对比">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Claude Code /loop 机制深度解析：与 ralph-loop 的对比</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/06/crewai-defects-and-optimization/" title="CrewAI 源码深度分析：缺陷识别与优化方向">
+                        <span class="hidden-mobile">CrewAI 源码深度分析：缺陷识别与优化方向</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.5.1/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"qyPrAYIAey77o4bjcc5pMipZ-gzGzoHsz","appKey":"z6pYYg24nUCBJSA52IXmNkMe","path":"window.location.pathname","placeholder":"说点什么","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+
+</div>
+
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
